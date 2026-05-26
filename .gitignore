@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.pyc
+.env
+posts.db
+uploads/
+icon-192.png
+icon-512.png
+*.db-journal

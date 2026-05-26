@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Social Post Creator</title>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#6366f1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Social Post" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    * { font-family: 'Inter', system-ui, sans-serif; }
+    .drop-zone { transition: all 0.2s; }
+    .drop-zone.drag-over { border-color: #6366f1; background: rgba(99,102,241,0.05); }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .preview-instagram { background: white; border: 1px solid #dbdbdb; border-radius: 8px; max-width: 468px; }
+    .preview-facebook { background: white; border: 1px solid #dddfe2; border-radius: 8px; max-width: 500px; }
+    .preview-tiktok { background: #010101; border-radius: 8px; max-width: 320px; color: white; }
+    .preview-gmb { background: white; border: 1px solid #e0e0e0; border-radius: 8px; max-width: 480px; }
+    .hashtag-chip { display: inline-flex; align-items: center; gap: 4px; background: #ede9fe; color: #5b21b6; border-radius: 999px; padding: 2px 10px; font-size: 13px; cursor: pointer; }
+    .hashtag-chip:hover { background: #ddd6fe; }
+    .step-bar { display: flex; align-items: center; gap: 0; }
+    .step-dot { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0; }
+    .step-line { flex: 1; height: 2px; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+// ─── Constantes ──────────────────────────────────────────────────────────────
+
+const PLATFORMS = [
+  { id: 'instagram', name: 'Instagram', color: '#E1306C', bg: '#fdf2f8',
+    icon: (<svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.209-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>) },
+  { id: 'facebook', name: 'Facebook', color: '#1877F2', bg: '#eff6ff',
+    icon: (<svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>) },
+  { id: 'tiktok', name: 'TikTok', color: '#010101', bg: '#f8fafc',
+    icon: (<svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.22 8.22 0 004.82 1.55V6.79a4.85 4.85 0 01-1.05-.1z"/></svg>) },
+  { id: 'google_my_business', name: 'Google Business', color: '#4285F4', bg: '#f0f9ff',
+    icon: (<svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>) },
+];
+
+const TONES = [
+  { id: 'professionnel', label: 'Professionnel', emoji: '💼', desc: 'Soigné et crédible' },
+  { id: 'fun', label: 'Fun', emoji: '🎉', desc: 'Léger et engageant' },
+  { id: 'storytelling', label: 'Storytelling', emoji: '📖', desc: 'Narratif et émotionnel' },
+];
+
+const CHAR_LIMITS = { instagram: 2200, facebook: 63000, tiktok: 150, google_my_business: 1500 };
+
+const STATUS_COLORS = {
+  pending: 'bg-amber-100 text-amber-700',
+  published: 'bg-green-100 text-green-700',
+  failed: 'bg-red-100 text-red-700',
+};
+const STATUS_LABELS = { pending: 'En attente', published: 'Publié', failed: 'Échec' };
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const formatBytes = (b) => b < 1024*1024 ? `${(b/1024).toFixed(0)} Ko` : `${(b/1024/1024).toFixed(1)} Mo`;
+const formatDate = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleString('fr-FR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+};
+const getPlatform = (id) => PLATFORMS.find(p => p.id === id);
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Erreur serveur');
+  }
+  return res.json();
+}
+
+// ─── Composants UI ───────────────────────────────────────────────────────────
+
+function Spinner({ size = 5 }) {
+  return <svg className={`spin w-${size} h-${size} text-indigo-600`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+  </svg>;
+}
+
+function Toast({ message, type, onClose }) {
+  useEffect(() => { const t = setTimeout(onClose, 4000); return () => clearTimeout(t); }, []);
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-indigo-600' };
+  return (
+    <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-xl text-white shadow-lg ${colors[type]} transition-all`}>
+      <span className="text-sm font-medium">{message}</span>
+      <button onClick={onClose} className="opacity-70 hover:opacity-100 text-lg leading-none">×</button>
+    </div>
+  );
+}
+
+function Badge({ status }) {
+  return <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${STATUS_COLORS[status]}`}>{STATUS_LABELS[status]}</span>;
+}
+
+// ─── Sidebar ─────────────────────────────────────────────────────────────────
+
+function Sidebar({ view, setView, postsCount, bizName }) {
+  const items = [
+    { id: 'create',   label: 'Créer un post',   icon: '✨' },
+    { id: 'posts',    label: 'Posts planifiés',  icon: '📅', badge: postsCount },
+    { id: 'business', label: 'Mon Business',     icon: '🏢' },
+    { id: 'settings', label: 'Paramètres',       icon: '⚙️' },
+  ];
+  return (
+    <aside className="fixed inset-y-0 left-0 w-60 bg-white border-r border-slate-200 flex flex-col z-40">
+      <div className="px-5 py-6 border-b border-slate-100">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg">S</div>
+          <div>
+            <div className="font-bold text-slate-900 text-sm leading-tight">Social Post</div>
+            <div className="text-xs text-slate-400">Creator IA</div>
+          </div>
+        </div>
+      </div>
+      <nav className="flex-1 p-3 space-y-1">
+        {items.map(item => (
+          <button key={item.id} onClick={() => setView(item.id)}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              view === item.id ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'
+            }`}>
+            <span className="text-base">{item.icon}</span>
+            <span className="flex-1 text-left">{item.label}</span>
+            {item.badge > 0 && (
+              <span className="bg-indigo-600 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[20px] text-center">{item.badge}</span>
+            )}
+          </button>
+        ))}
+      </nav>
+      {bizName && (
+        <div className="px-4 py-3 border-t border-slate-100">
+          <div className="bg-indigo-50 rounded-xl px-3 py-2">
+            <div className="text-xs text-indigo-400 mb-0.5">Business actif</div>
+            <div className="text-xs font-semibold text-indigo-700 truncate">🏢 {bizName}</div>
+          </div>
+        </div>
+      )}
+      <div className="p-4 border-t border-slate-100 text-xs text-slate-400 text-center">
+        Propulsé par Claude AI
+      </div>
+    </aside>
+  );
+}
+
+// ─── Step indicator ───────────────────────────────────────────────────────────
+
+function StepBar({ step }) {
+  const steps = ['Média', 'Générer', 'Publier'];
+  return (
+    <div className="step-bar mb-8">
+      {steps.map((label, i) => {
+        const n = i + 1;
+        const done = n < step;
+        const active = n === step;
+        return (
+          <React.Fragment key={n}>
+            <div className="flex flex-col items-center gap-1">
+              <div className={`step-dot text-sm ${done ? 'bg-indigo-600 text-white' : active ? 'bg-indigo-600 text-white ring-4 ring-indigo-100' : 'bg-slate-200 text-slate-500'}`}>
+                {done ? '✓' : n}
+              </div>
+              <span className={`text-xs font-medium ${active ? 'text-indigo-600' : 'text-slate-400'}`}>{label}</span>
+            </div>
+            {i < steps.length - 1 && (
+              <div className={`step-line mb-4 ${n < step ? 'bg-indigo-600' : 'bg-slate-200'}`} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Step 1: Upload ──────────────────────────────────────────────────────────
+
+function Step1Upload({ onNext }) {
+  const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+  const inputRef = useRef();
+
+  const handleFile = async (file) => {
+    setError('');
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const data = await api('/api/upload', { method: 'POST', body: fd });
+      onNext(data);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const onDrop = useCallback((e) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  }, []);
+
+  return (
+    <div className="max-w-lg mx-auto">
+      <h2 className="text-2xl font-bold text-slate-900 mb-1">Votre média</h2>
+      <p className="text-slate-500 mb-8">Importez une photo ou une vidéo pour votre post</p>
+
+      <div
+        className={`drop-zone border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer ${dragging ? 'drag-over' : 'border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/30'}`}
+        onClick={() => !uploading && inputRef.current.click()}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+      >
+        {uploading ? (
+          <div className="flex flex-col items-center gap-3">
+            <Spinner size={8} />
+            <p className="text-slate-500 font-medium">Upload en cours...</p>
+          </div>
+        ) : (
+          <>
+            <div className="text-5xl mb-4">📁</div>
+            <p className="text-slate-700 font-semibold text-lg mb-1">Glissez votre fichier ici</p>
+            <p className="text-slate-400 text-sm mb-4">ou cliquez pour sélectionner</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {['JPG', 'PNG', 'WEBP', 'MP4', 'MOV'].map(f => (
+                <span key={f} className="bg-slate-100 text-slate-500 text-xs px-2 py-1 rounded">{f}</span>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {error && <p className="mt-3 text-red-600 text-sm text-center">{error}</p>}
+
+      <input ref={inputRef} type="file" className="hidden"
+        accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/x-msvideo,video/webm"
+        onChange={(e) => e.target.files[0] && handleFile(e.target.files[0])} />
+    </div>
+  );
+}
+
+// ─── Questionnaire ────────────────────────────────────────────────────────────
+
+const OBJECTIFS = [
+  { id: 'vendre',    label: 'Vendre',        emoji: '🛒' },
+  { id: 'informer',  label: 'Informer',       emoji: '📢' },
+  { id: 'divertir',  label: 'Divertir',       emoji: '😄' },
+  { id: 'engager',   label: 'Engager',        emoji: '💬' },
+  { id: 'evenement', label: 'Annoncer',       emoji: '📅' },
+  { id: 'inspirer',  label: 'Inspirer',       emoji: '✨' },
+];
+
+function Questionnaire({ answers, onChange, isVideo }) {
+  const set = (key, val) => onChange({ ...answers, [key]: val });
+  const answered = Object.values(answers).filter(v => v && v.trim && v.trim()).length
+    + (answers.objectif ? 1 : 0);
+
+  return (
+    <div className="space-y-5">
+
+      {/* Q1 : Sujet */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full text-xs font-bold flex items-center justify-center">1</span>
+          <span className="font-semibold text-slate-800 text-sm">
+            {isVideo ? 'Que montre votre vidéo ?' : 'Que montre votre photo ?'}
+          </span>
+          {answers.sujet && <span className="ml-auto text-green-500 text-xs">✓</span>}
+        </div>
+        <textarea
+          value={answers.sujet || ''}
+          onChange={e => set('sujet', e.target.value)}
+          rows={2} placeholder="Ex: Notre nouveau produit, une photo de l'équipe, les coulisses du restaurant..."
+          className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none bg-slate-50"
+        />
+      </div>
+
+      {/* Q2 : Objectif */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full text-xs font-bold flex items-center justify-center">2</span>
+          <span className="font-semibold text-slate-800 text-sm">Quel est l'objectif de ce post ?</span>
+          {answers.objectif && <span className="ml-auto text-green-500 text-xs">✓</span>}
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {OBJECTIFS.map(o => (
+            <button key={o.id} onClick={() => set('objectif', answers.objectif === o.id ? '' : o.id)}
+              className={`flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl border-2 text-xs font-medium transition-all ${
+                answers.objectif === o.id
+                  ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                  : 'border-slate-200 hover:border-slate-300 text-slate-600'
+              }`}>
+              <span className="text-lg">{o.emoji}</span>
+              {o.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Q3 : Audience */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full text-xs font-bold flex items-center justify-center">3</span>
+          <span className="font-semibold text-slate-800 text-sm">Qui est votre audience cible ?</span>
+          {answers.cible && <span className="ml-auto text-green-500 text-xs">✓</span>}
+        </div>
+        <input
+          type="text"
+          value={answers.cible || ''}
+          onChange={e => set('cible', e.target.value)}
+          placeholder="Ex: familles avec enfants, jeunes professionnels, passionnés de sport..."
+          className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-slate-50"
+        />
+      </div>
+
+      {/* Q4 : Offre / promotion */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full text-xs font-bold flex items-center justify-center">4</span>
+          <span className="font-semibold text-slate-800 text-sm">Promotion ou info clé à mentionner ?</span>
+          <span className="text-slate-400 text-xs ml-1">(optionnel)</span>
+          {answers.offre && <span className="ml-auto text-green-500 text-xs">✓</span>}
+        </div>
+        <input
+          type="text"
+          value={answers.offre || ''}
+          onChange={e => set('offre', e.target.value)}
+          placeholder="Ex: -20% ce weekend, ouverture d'une nouvelle boutique, nouveau menu..."
+          className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-slate-50"
+        />
+      </div>
+
+      {/* Q5 : CTA */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full text-xs font-bold flex items-center justify-center">5</span>
+          <span className="font-semibold text-slate-800 text-sm">Appel à l'action souhaité ?</span>
+          <span className="text-slate-400 text-xs ml-1">(optionnel)</span>
+          {answers.cta && <span className="ml-auto text-green-500 text-xs">✓</span>}
+        </div>
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {['Lien en bio', 'Contactez-nous', 'Réservez maintenant', 'Visitez notre site', 'Partagez'].map(s => (
+            <button key={s} onClick={() => set('cta', answers.cta === s ? '' : s)}
+              className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
+                answers.cta === s ? 'bg-indigo-100 border-indigo-400 text-indigo-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'
+              }`}>{s}</button>
+          ))}
+        </div>
+        <input
+          type="text"
+          value={answers.cta || ''}
+          onChange={e => set('cta', e.target.value)}
+          placeholder="Ou écrivez votre propre appel à l'action..."
+          className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-slate-50"
+        />
+      </div>
+
+      {/* Barre de progression */}
+      <div className="flex items-center gap-2 px-1">
+        <div className="flex-1 bg-slate-200 rounded-full h-1.5">
+          <div className="bg-indigo-500 h-1.5 rounded-full transition-all" style={{ width: `${Math.min(100, answered * 20)}%` }} />
+        </div>
+        <span className="text-xs text-slate-400">{answered}/5 réponses</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Step 2: Configure & Generate ────────────────────────────────────────────
+
+function Step2Configure({ media, onNext, onBack }) {
+  const [platform, setPlatform] = useState('instagram');
+  const [tone, setTone] = useState('professionnel');
+  const [answers, setAnswers] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const isVideo = media.media_type === 'video';
+
+  const generate = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append('media_path', media.path);
+      fd.append('platform', platform);
+      fd.append('tone', tone);
+      fd.append('questionnaire', JSON.stringify(answers));
+      const data = await api('/api/generate', { method: 'POST', body: fd });
+      onNext({ ...data, platform, tone });
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <h2 className="text-2xl font-bold text-slate-900 mb-1">Parlez-nous de votre contenu</h2>
+      <p className="text-slate-500 mb-6">Plus vous répondez, plus l'IA sera précise dans sa rédaction</p>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* Colonne gauche : questionnaire */}
+        <div>
+          {/* Aperçu miniature */}
+          <div className="mb-4 rounded-xl overflow-hidden bg-slate-100 h-40 flex items-center justify-center relative">
+            {isVideo
+              ? <video src={media.path} className="w-full h-full object-contain" />
+              : <img src={media.path} alt="Média" className="w-full h-full object-contain" />}
+            <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
+              {isVideo ? '🎬' : '🖼️'} {formatBytes(media.size)}
+            </div>
+          </div>
+
+          <Questionnaire answers={answers} onChange={setAnswers} isVideo={isVideo} />
+        </div>
+
+        {/* Colonne droite : plateforme + ton + bouton */}
+        <div className="flex flex-col gap-5">
+
+          {/* Plateforme */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <label className="block text-sm font-semibold text-slate-700 mb-3">📱 Plateforme cible</label>
+            <div className="grid grid-cols-2 gap-2">
+              {PLATFORMS.map(p => (
+                <button key={p.id} onClick={() => setPlatform(p.id)}
+                  className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
+                    platform === p.id ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 hover:border-slate-300 text-slate-600'
+                  }`}>
+                  <span style={{ color: p.color }}>{p.icon}</span>
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Ton */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <label className="block text-sm font-semibold text-slate-700 mb-3">🎨 Ton de la légende</label>
+            <div className="grid grid-cols-3 gap-2">
+              {TONES.map(t => (
+                <button key={t.id} onClick={() => setTone(t.id)}
+                  className={`flex flex-col items-center gap-1 px-2 py-3 rounded-xl border-2 text-xs font-medium transition-all ${
+                    tone === t.id ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 hover:border-slate-300 text-slate-600'
+                  }`}>
+                  <span className="text-xl">{t.emoji}</span>
+                  <span className="font-semibold">{t.label}</span>
+                  <span className="text-slate-400 text-center leading-tight">{t.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Résumé des réponses */}
+          {Object.values(answers).some(v => v) && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 text-xs text-indigo-700 space-y-1">
+              <div className="font-semibold mb-2">📝 Résumé pour l'IA :</div>
+              {answers.sujet && <div>• Sujet : {answers.sujet}</div>}
+              {answers.objectif && <div>• Objectif : {OBJECTIFS.find(o => o.id === answers.objectif)?.label}</div>}
+              {answers.cible && <div>• Cible : {answers.cible}</div>}
+              {answers.offre && <div>• Offre : {answers.offre}</div>}
+              {answers.cta && <div>• CTA : {answers.cta}</div>}
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">{error}</div>
+          )}
+
+          <div className="flex gap-3 mt-auto">
+            <button onClick={onBack} className="flex-1 border border-slate-300 text-slate-600 py-3 rounded-xl font-medium hover:bg-slate-50 transition-all">
+              ← Retour
+            </button>
+            <button onClick={generate} disabled={loading}
+              className="flex-[2] bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-60">
+              {loading ? <><Spinner /> Génération...</> : '✨ Générer avec l\'IA'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Platform Preview ─────────────────────────────────────────────────────────
+
+function PlatformPreview({ platform, media, caption, hashtags }) {
+  const hashtagText = hashtags.join(' ');
+  const fullText = caption + (hashtagText ? '\n\n' + hashtagText : '');
+  const isVideo = media.media_type === 'video';
+
+  const MediaEl = () => isVideo
+    ? <video src={media.path} className="w-full object-cover" style={{ maxHeight: 300 }} muted autoPlay loop playsInline />
+    : <img src={media.path} alt="" className="w-full object-cover" style={{ maxHeight: 300 }} />;
+
+  if (platform === 'instagram') return (
+    <div className="preview-instagram mx-auto shadow-sm">
+      <div className="flex items-center gap-2 p-3 border-b border-slate-100">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-orange-400" />
+        <div><div className="text-xs font-semibold">votre_compte</div><div className="text-xs text-slate-400">France</div></div>
+        <div className="ml-auto text-slate-400">···</div>
+      </div>
+      <MediaEl />
+      <div className="p-3 space-y-2">
+        <div className="flex gap-4 text-slate-700">
+          <span>♡</span><span>💬</span><span>↗</span><span className="ml-auto">🔖</span>
+        </div>
+        <div className="text-xs">
+          <span className="font-semibold">votre_compte </span>
+          <span className="whitespace-pre-wrap">{caption}</span>
+        </div>
+        {hashtagText && <div className="text-xs text-blue-500">{hashtagText}</div>}
+      </div>
+    </div>
+  );
+
+  if (platform === 'facebook') return (
+    <div className="preview-facebook mx-auto shadow-sm">
+      <div className="flex items-center gap-2 p-3">
+        <div className="w-10 h-10 rounded-full bg-blue-500" />
+        <div><div className="text-sm font-semibold">Votre Page</div><div className="text-xs text-slate-400">À l'instant · 🌍</div></div>
+        <div className="ml-auto text-slate-400">···</div>
+      </div>
+      <p className="px-3 pb-2 text-sm whitespace-pre-wrap">{fullText}</p>
+      <MediaEl />
+      <div className="p-3 border-t border-slate-100 flex gap-4 text-sm text-slate-500">
+        <span>👍 J'aime</span><span>💬 Commenter</span><span>↗ Partager</span>
+      </div>
+    </div>
+  );
+
+  if (platform === 'tiktok') return (
+    <div className="preview-tiktok mx-auto shadow-lg relative overflow-hidden" style={{ height: 400 }}>
+      <MediaEl />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 p-4">
+        <div className="text-white text-sm font-semibold mb-1">@votre_compte</div>
+        <div className="text-white text-sm whitespace-pre-wrap">{caption.slice(0, 150)}</div>
+        {hashtagText && <div className="text-blue-300 text-xs mt-1">{hashtagText}</div>}
+      </div>
+      <div className="absolute right-3 bottom-20 flex flex-col items-center gap-4 text-white">
+        <div className="flex flex-col items-center"><div className="text-2xl">♡</div><div className="text-xs">12.3K</div></div>
+        <div className="flex flex-col items-center"><div className="text-2xl">💬</div><div className="text-xs">432</div></div>
+        <div className="flex flex-col items-center"><div className="text-2xl">↗</div><div className="text-xs">890</div></div>
+      </div>
+    </div>
+  );
+
+  if (platform === 'google_my_business') return (
+    <div className="preview-gmb mx-auto shadow-sm">
+      <div className="flex items-center gap-2 p-3 border-b border-slate-100">
+        <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">V</div>
+        <div><div className="text-sm font-semibold">Votre Établissement</div><div className="text-xs text-slate-400 flex items-center gap-1">★★★★★ · Google Business</div></div>
+      </div>
+      <MediaEl />
+      <div className="p-3">
+        <p className="text-sm text-slate-700 whitespace-pre-wrap">{caption}</p>
+        <div className="mt-3 flex gap-2">
+          <span className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full border border-blue-200">En savoir plus →</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  return null;
+}
+
+// ─── Step 3: Edit, Preview & Publish ─────────────────────────────────────────
+
+function Step3Publish({ media, generated, onBack, onDone, showToast }) {
+  const [caption, setCaption] = useState(generated.caption);
+  const [hashtags, setHashtags] = useState(generated.hashtags || []);
+  const [newTag, setNewTag] = useState('');
+  const [platform, setPlatform] = useState(generated.platform);
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [publishing, setPublishing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('edit');
+
+  const limit = CHAR_LIMITS[platform];
+  const captionLen = caption.length;
+  const over = captionLen > limit;
+
+  const addTag = () => {
+    const tag = newTag.trim().replace(/^#*/, '#');
+    if (tag.length > 1 && !hashtags.includes(tag)) {
+      setHashtags([...hashtags, tag]);
+    }
+    setNewTag('');
+  };
+
+  const removeTag = (tag) => setHashtags(hashtags.filter(t => t !== tag));
+
+  const buildFormData = (scheduleAt = null) => {
+    const fd = new FormData();
+    fd.append('media_path', media.path);
+    fd.append('media_type', media.media_type);
+    fd.append('platform', platform);
+    fd.append('caption', caption);
+    fd.append('hashtags', JSON.stringify(hashtags));
+    if (scheduleAt) fd.append('scheduled_at', scheduleAt);
+    return fd;
+  };
+
+  const schedule = async () => {
+    if (!scheduledAt) { showToast('Choisissez une date et heure', 'error'); return; }
+    setSaving(true);
+    try {
+      await api('/api/posts', { method: 'POST', body: buildFormData(scheduledAt) });
+      showToast('Post planifié avec succès !', 'success');
+      onDone();
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const publishNow = async () => {
+    setPublishing(true);
+    try {
+      const fd = buildFormData();
+      const post = await api('/api/posts', { method: 'POST', body: fd });
+      await api(`/api/publish/${post.id}`, { method: 'POST' });
+      showToast('Post publié avec succès ! 🎉', 'success');
+      onDone();
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const saveOnly = async () => {
+    setSaving(true);
+    try {
+      await api('/api/posts', { method: 'POST', body: buildFormData() });
+      showToast('Post sauvegardé', 'info');
+      onDone();
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const copyToClipboard = () => {
+    const text = caption + (hashtags.length ? '\n\n' + hashtags.join(' ') : '');
+    navigator.clipboard.writeText(text)
+      .then(() => showToast('Texte copié ! Collez-le directement sur votre réseau. 📋', 'success'))
+      .catch(() => showToast('Impossible de copier automatiquement', 'error'));
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
+      {/* Gauche : édition */}
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900 mb-1">Finaliser le post</h2>
+        <p className="text-slate-500 mb-5">Éditez le contenu généré par l'IA puis publiez</p>
+
+        {/* Tabs */}
+        <div className="flex border-b border-slate-200 mb-5">
+          {[['edit', '✏️ Éditer'], ['preview', '👁️ Aperçu']].map(([id, label]) => (
+            <button key={id} onClick={() => setActiveTab(id)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-all ${activeTab === id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'edit' ? (
+          <>
+            {/* Sélecteur plateforme */}
+            <div className="mb-4">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">Plateforme</label>
+              <div className="flex gap-1.5 flex-wrap">
+                {PLATFORMS.map(p => (
+                  <button key={p.id} onClick={() => setPlatform(p.id)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all ${platform === p.id ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}>
+                    <span style={{ color: p.color }}>{p.icon}</span>{p.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Légende */}
+            <div className="mb-4">
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Légende</label>
+                <span className={`text-xs ${over ? 'text-red-500 font-semibold' : 'text-slate-400'}`}>{captionLen} / {limit}</span>
+              </div>
+              <textarea value={caption} onChange={e => setCaption(e.target.value)} rows={6}
+                className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 resize-none transition-all ${over ? 'border-red-400 focus:ring-red-300' : 'border-slate-300 focus:ring-indigo-400'}`} />
+            </div>
+
+            {/* Hashtags */}
+            <div className="mb-5">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">Hashtags ({hashtags.length})</label>
+              <div className="flex flex-wrap gap-1.5 mb-2 min-h-[32px]">
+                {hashtags.map(tag => (
+                  <span key={tag} className="hashtag-chip" onClick={() => removeTag(tag)}>
+                    {tag} <span className="opacity-50 text-xs">×</span>
+                  </span>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input value={newTag} onChange={e => setNewTag(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addTag()}
+                  placeholder="Ajouter un hashtag..." className="flex-1 border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                <button onClick={addTag} className="bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 transition-all">+</button>
+              </div>
+            </div>
+
+            {/* Planification */}
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <label className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2 block">📅 Planifier la publication</label>
+              <input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)}
+                min={new Date().toISOString().slice(0, 16)}
+                className="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            </div>
+
+            {/* Actions */}
+            <div className="space-y-2.5">
+              {/* Copier — toujours disponible, sans config */}
+              <button onClick={copyToClipboard} disabled={over}
+                className="w-full bg-emerald-500 text-white py-3 rounded-xl font-semibold hover:bg-emerald-600 transition-all flex items-center justify-center gap-2 disabled:opacity-60">
+                📋 Copier le texte — coller sur le réseau
+              </button>
+
+              {/* Publier automatiquement */}
+              <button onClick={publishNow} disabled={publishing || over}
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-60">
+                {publishing ? <><Spinner /> Publication...</> : '🚀 Publier automatiquement (Ayrshare)'}
+              </button>
+
+              <div className="flex gap-2">
+                <button onClick={schedule} disabled={!scheduledAt || saving || over}
+                  className="flex-1 bg-amber-500 text-white py-2.5 rounded-xl font-medium hover:bg-amber-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                  {saving ? <Spinner size={4} /> : '📅'} Planifier
+                </button>
+                <button onClick={saveOnly} disabled={saving}
+                  className="flex-1 border border-slate-300 text-slate-600 py-2.5 rounded-xl font-medium hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
+                  💾 Sauvegarder
+                </button>
+              </div>
+              <button onClick={onBack} className="w-full text-slate-400 text-sm hover:text-slate-600 py-1">← Retour</button>
+            </div>
+          </>
+        ) : (
+          <div className="lg:hidden">
+            <PlatformPreview platform={platform} media={media} caption={caption} hashtags={hashtags} />
+          </div>
+        )}
+      </div>
+
+      {/* Droite : preview (desktop) */}
+      <div className="hidden lg:block">
+        <div className="sticky top-6">
+          <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Aperçu · {getPlatform(platform)?.name}</h3>
+          <PlatformPreview platform={platform} media={media} caption={caption} hashtags={hashtags} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Vue : Créer un post ──────────────────────────────────────────────────────
+
+function CreateView({ showToast, onPostCreated }) {
+  const [step, setStep] = useState(1);
+  const [media, setMedia] = useState(null);
+  const [generated, setGenerated] = useState(null);
+
+  const reset = () => { setStep(1); setMedia(null); setGenerated(null); };
+
+  if (step === 1) return (
+    <div>
+      <StepBar step={1} />
+      <Step1Upload onNext={(m) => { setMedia(m); setStep(2); }} />
+    </div>
+  );
+
+  if (step === 2) return (
+    <div>
+      <StepBar step={2} />
+      <Step2Configure media={media} onNext={(g) => { setGenerated(g); setStep(3); }} onBack={() => setStep(1)} />
+    </div>
+  );
+
+  if (step === 3) return (
+    <div>
+      <StepBar step={3} />
+      <Step3Publish media={media} generated={generated} onBack={() => setStep(2)} onDone={() => { reset(); onPostCreated(); }} showToast={showToast} />
+    </div>
+  );
+}
+
+// ─── Vue : Posts planifiés ────────────────────────────────────────────────────
+
+function PostsView({ showToast, onRefresh }) {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [publishingId, setPublishingId] = useState(null);
+
+  const fetchPosts = async () => {
+    try {
+      const data = await api('/api/posts');
+      setPosts(data);
+    } catch (e) {
+      showToast('Erreur de chargement', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchPosts(); }, []);
+
+  const handlePublish = async (id) => {
+    setPublishingId(id);
+    try {
+      await api(`/api/publish/${id}`, { method: 'POST' });
+      showToast('Post publié ! 🎉', 'success');
+      fetchPosts();
+      onRefresh();
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setPublishingId(null);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Supprimer ce post ?')) return;
+    try {
+      await api(`/api/posts/${id}`, { method: 'DELETE' });
+      setPosts(p => p.filter(x => x.id !== id));
+      showToast('Post supprimé', 'info');
+      onRefresh();
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  };
+
+  if (loading) return <div className="flex justify-center py-20"><Spinner size={8} /></div>;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Posts</h2>
+          <p className="text-slate-500">{posts.length} post{posts.length !== 1 ? 's' : ''} au total</p>
+        </div>
+        <button onClick={fetchPosts} className="border border-slate-300 text-slate-600 px-4 py-2 rounded-lg text-sm hover:bg-slate-50 transition-all">↻ Actualiser</button>
+      </div>
+
+      {posts.length === 0 ? (
+        <div className="text-center py-20">
+          <div className="text-5xl mb-4">📭</div>
+          <p className="text-slate-500 font-medium">Aucun post pour l'instant</p>
+          <p className="text-slate-400 text-sm mt-1">Créez votre premier post dans l'onglet "Créer"</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {posts.map(post => {
+            const plat = getPlatform(post.platform);
+            let tags = [];
+            try { tags = JSON.parse(post.hashtags || '[]'); } catch {}
+
+            return (
+              <div key={post.id} className="bg-white rounded-2xl border border-slate-200 p-4 flex gap-4 items-start shadow-sm hover:shadow-md transition-shadow">
+                {/* Miniature */}
+                <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
+                  {post.media_type === 'video' ? (
+                    <video src={post.media_path} className="w-full h-full object-cover" />
+                  ) : (
+                    <img src={post.media_path} alt="" className="w-full h-full object-cover" />
+                  )}
+                </div>
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="flex items-center gap-1 text-sm font-semibold" style={{ color: plat?.color }}>
+                      {plat?.icon} {plat?.name}
+                    </span>
+                    <Badge status={post.status} />
+                    {post.scheduled_at && post.status === 'pending' && (
+                      <span className="text-xs text-slate-500">📅 {formatDate(post.scheduled_at)}</span>
+                    )}
+                  </div>
+                  <p className="text-sm text-slate-700 line-clamp-2 mb-1">{post.caption}</p>
+                  {tags.length > 0 && (
+                    <p className="text-xs text-indigo-400 truncate">{tags.slice(0, 5).join(' ')}{tags.length > 5 ? ' ...' : ''}</p>
+                  )}
+                  {post.error_message && (
+                    <p className="text-xs text-red-500 mt-1">⚠️ {post.error_message}</p>
+                  )}
+                  <p className="text-xs text-slate-400 mt-1">Créé le {formatDate(post.created_at)}</p>
+                </div>
+                {/* Actions */}
+                <div className="flex flex-col gap-2 flex-shrink-0">
+                  {post.status !== 'published' && (
+                    <button onClick={() => handlePublish(post.id)} disabled={publishingId === post.id}
+                      className="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-all flex items-center gap-1 disabled:opacity-60">
+                      {publishingId === post.id ? <Spinner size={3} /> : '🚀'} Publier
+                    </button>
+                  )}
+                  <button onClick={() => handleDelete(post.id)}
+                    className="border border-red-200 text-red-500 text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition-all">
+                    🗑️ Supprimer
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Guides de connexion ──────────────────────────────────────────────────────
+
+const GUIDES = {
+  facebook: {
+    title: 'Connecter Facebook',
+    color: '#1877F2',
+    temps: '10 min',
+    prerequis: 'Une Page Facebook pour votre entreprise',
+    etapes: [
+      {
+        titre: 'Créer une app développeur',
+        detail: 'Allez sur developers.facebook.com → cliquez "Mes apps" → "Créer une app" → choisissez le type "Business".',
+        lien: 'https://developers.facebook.com/apps/',
+        lienLabel: 'Ouvrir Meta for Developers →',
+      },
+      {
+        titre: 'Ajouter la permission Pages',
+        detail: 'Dans votre app : Tableau de bord → "Ajouter un produit" → cherchez "Pages API" et cliquez "Configurer".',
+      },
+      {
+        titre: 'Générer votre Token de Page',
+        detail: 'Allez dans Outils → "Explorateur de l\'API Graph". En haut à droite, cliquez sur "Générer un token" → "Générer un token de page d\'accès". Sélectionnez votre Page. Copiez le token affiché → collez-le dans le champ "Page Access Token" ci-dessus.',
+        lien: 'https://developers.facebook.com/tools/explorer/',
+        lienLabel: 'Ouvrir l\'Explorateur API →',
+      },
+      {
+        titre: 'Trouver votre Page ID',
+        detail: 'Allez sur votre Page Facebook → cliquez "À propos" → faites défiler jusqu\'à "Infos sur la Page". L\'ID est le numéro affiché. Ou allez dans Paramètres de la Page → Informations de la Page → "ID de la Page".',
+      },
+    ],
+  },
+
+  instagram: {
+    title: 'Connecter Instagram',
+    color: '#E1306C',
+    temps: '15 min',
+    prerequis: 'Compte Instagram Professionnel (Business ou Créateur) + lié à une Page Facebook',
+    etapes: [
+      {
+        titre: 'Passer en compte Professionnel',
+        detail: 'Sur Instagram → Paramètres → Compte → "Passer à un compte Professionnel". Choisissez "Business". Ensuite liez votre Page Facebook dans Paramètres → Page Facebook.',
+      },
+      {
+        titre: 'Créer votre app Meta (même que Facebook)',
+        detail: 'Si vous avez déjà fait Facebook, utilisez la même app. Sinon créez-la sur developers.facebook.com.',
+        lien: 'https://developers.facebook.com/apps/',
+        lienLabel: 'Ouvrir Meta for Developers →',
+      },
+      {
+        titre: 'Ajouter Instagram Graph API',
+        detail: 'Dans votre app Meta : "Ajouter un produit" → "Instagram Graph API" → Configurer. Ajoutez les permissions : instagram_basic, instagram_content_publish, pages_read_engagement.',
+      },
+      {
+        titre: 'Récupérer votre Instagram User ID',
+        detail: 'Dans l\'Explorateur API Graph : tapez /me/accounts dans le champ de requête → Exécuter. Vous verrez vos Pages. Cliquez sur l\'ID de votre Page puis faites /PAGE_ID?fields=instagram_business_account → l\'ID Instagram apparaît. Copiez-le dans "Instagram User ID".',
+        lien: 'https://developers.facebook.com/tools/explorer/',
+        lienLabel: 'Ouvrir l\'Explorateur API →',
+      },
+      {
+        titre: 'Token d\'accès',
+        detail: 'Utilisez le même Access Token que votre Page Facebook — il fonctionne pour les deux.',
+      },
+    ],
+  },
+
+  tiktok: {
+    title: 'Connecter TikTok',
+    color: '#010101',
+    temps: '20 min',
+    prerequis: 'Compte TikTok Business ou Créateur + accès au Developer Portal',
+    etapes: [
+      {
+        titre: 'Créer un compte développeur TikTok',
+        detail: 'Allez sur developers.tiktok.com → connectez-vous avec votre compte TikTok → Cliquez "My Apps".',
+        lien: 'https://developers.tiktok.com/',
+        lienLabel: 'Ouvrir TikTok Developers →',
+      },
+      {
+        titre: 'Créer une application',
+        detail: 'Cliquez "Create app" → donnez un nom → cochez "Content Posting API" dans les produits. Remplissez les informations demandées (URL de politique de confidentialité requise).',
+      },
+      {
+        titre: 'Configurer les permissions',
+        detail: 'Dans votre app → Produits → Content Posting API → cochez les scopes : video.publish, video.upload.',
+      },
+      {
+        titre: 'Obtenir un Access Token',
+        detail: 'TikTok utilise OAuth 2.0. Avec votre Client Key et Client Secret, suivez le flow OAuth. Le plus simple est d\'utiliser l\'outil Sandbox dans le Developer Portal pour générer un token de test. Pour la production, il faut implémenter le flow complet ou utiliser un outil comme Postman.',
+        lien: 'https://developers.tiktok.com/doc/oauth-user-access-token-management',
+        lienLabel: 'Guide OAuth TikTok →',
+      },
+    ],
+  },
+
+  google_my_business: {
+    title: 'Connecter Google My Business',
+    color: '#4285F4',
+    temps: '20 min',
+    prerequis: 'Fiche Google Business Profile vérifiée',
+    etapes: [
+      {
+        titre: 'Créer un projet Google Cloud',
+        detail: 'Allez sur console.cloud.google.com → "Nouveau projet" → donnez-lui un nom.',
+        lien: 'https://console.cloud.google.com/',
+        lienLabel: 'Ouvrir Google Cloud Console →',
+      },
+      {
+        titre: 'Activer l\'API Business Profile',
+        detail: 'Dans votre projet : menu "APIs et services" → "Bibliothèque" → cherchez "Business Profile API" → cliquez "Activer".',
+      },
+      {
+        titre: 'Créer des identifiants OAuth',
+        detail: 'APIs et services → Identifiants → "Créer des identifiants" → "ID client OAuth". Type : Application de bureau. Téléchargez le fichier JSON de credentials.',
+      },
+      {
+        titre: 'Obtenir votre Access Token',
+        detail: 'Méthode simple : allez sur OAuth Playground → cliquez ⚙️ → cochez "Use your own credentials" → entrez votre Client ID et Secret. Dans le champ scope entrez : https://www.googleapis.com/auth/business.manage → Authorize → Exchange code for tokens. Copiez le Access Token.',
+        lien: 'https://developers.google.com/oauthplayground/',
+        lienLabel: 'Ouvrir OAuth Playground →',
+      },
+      {
+        titre: 'Trouver votre Account ID et Location ID',
+        detail: 'Avec votre token, faites un appel GET sur : https://mybusinessaccountmanagement.googleapis.com/v1/accounts — l\'Account ID apparaît (format : accounts/XXXXXXXXX). Puis GET https://mybusinessbusinessinformation.googleapis.com/v1/{accountId}/locations — copiez le Location ID (format : locations/XXXXXXXXX).',
+        lien: 'https://developers.google.com/my-business/reference/businessinformation/rest',
+        lienLabel: 'Documentation API →',
+      },
+    ],
+  },
+};
+
+function PlatformGuide({ platformId, open, onToggle }) {
+  const guide = GUIDES[platformId];
+  if (!guide) return null;
+
+  return (
+    <div className="border border-slate-200 rounded-xl overflow-hidden mt-3">
+      <button onClick={onToggle}
+        className="w-full flex items-center gap-2 px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-all text-left">
+        <span className="text-sm">📖</span>
+        <span className="text-sm font-medium text-slate-700">Guide de connexion</span>
+        <span className="ml-auto text-xs text-slate-400">{guide.temps} · {open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="p-4 space-y-4 bg-white">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
+            <strong>Prérequis :</strong> {guide.prerequis}
+          </div>
+
+          <ol className="space-y-4">
+            {guide.etapes.map((e, i) => (
+              <li key={i} className="flex gap-3">
+                <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5"
+                  style={{ background: guide.color + '20', color: guide.color }}>
+                  {i + 1}
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-slate-800 mb-0.5">{e.titre}</div>
+                  <div className="text-xs text-slate-600 leading-relaxed">{e.detail}</div>
+                  {e.lien && (
+                    <a href={e.lien} target="_blank" rel="noopener"
+                      className="inline-flex items-center gap-1 mt-1.5 text-xs font-medium px-2.5 py-1 rounded-full border transition-all"
+                      style={{ color: guide.color, borderColor: guide.color + '40', background: guide.color + '10' }}>
+                      {e.lienLabel}
+                    </a>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700">
+            💡 <strong>Astuce :</strong> Une fois les tokens obtenus, collez-les dans les champs ci-dessus et cliquez Sauvegarder.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Vue : Paramètres ─────────────────────────────────────────────────────────
+
+function SettingsView({ showToast }) {
+  const [configs, setConfigs] = useState({});
+  const [forms, setForms] = useState({
+    instagram: { access_token: '', ig_user_id: '' },
+    facebook: { access_token: '', page_id: '' },
+    tiktok: { access_token: '' },
+    google_my_business: { access_token: '', account_id: '', location_id: '' },
+  });
+  const [saving, setSaving] = useState('');
+  const [openGuide, setOpenGuide] = useState('');
+  const [apiKeyOk, setApiKeyOk] = useState(null);
+  const [ayrshareKey, setAyrshareKey] = useState('');
+  const [ayrshareOk, setAyrshareOk] = useState(false);
+
+  useEffect(() => {
+    api('/api/check').then(d => setApiKeyOk(d.anthropic_key)).catch(() => setApiKeyOk(false));
+    api('/api/config').then(setConfigs).catch(() => {});
+    api('/api/config/ayrshare').then(d => {
+      if (d?.api_key) { setAyrshareKey(d.api_key); setAyrshareOk(true); }
+    }).catch(() => {});
+  }, []);
+
+  const saveAyrshare = async () => {
+    setSaving('ayrshare');
+    try {
+      await api('/api/config/ayrshare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: ayrshareKey }),
+      });
+      setAyrshareOk(true);
+      showToast('Ayrshare configuré ! Publication automatique activée.', 'success');
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setSaving('');
+    }
+  };
+
+  const save = async (platform) => {
+    setSaving(platform);
+    try {
+      await api(`/api/config/${platform}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(forms[platform]),
+      });
+      showToast(`Configuration ${getPlatform(platform)?.name} sauvegardée`, 'success');
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setSaving('');
+    }
+  };
+
+  const platformFields = {
+    instagram: [
+      { key: 'access_token', label: 'Access Token', placeholder: 'EAAxxxxxx...', help: 'Obtenez via Meta for Developers > Graph API Explorer' },
+      { key: 'ig_user_id', label: 'Instagram User ID', placeholder: '123456789', help: 'ID numérique de votre compte Instagram Business' },
+    ],
+    facebook: [
+      { key: 'access_token', label: 'Page Access Token', placeholder: 'EAAxxxxxx...', help: 'Token de page depuis Meta for Developers' },
+      { key: 'page_id', label: 'Page ID', placeholder: '123456789', help: 'ID numérique de votre Page Facebook' },
+    ],
+    tiktok: [
+      { key: 'access_token', label: 'Access Token', placeholder: 'act.xxxxx...', help: 'Obtenez via TikTok for Business Developer Portal' },
+    ],
+    google_my_business: [
+      { key: 'access_token', label: 'OAuth Access Token', placeholder: 'ya29.xxx...', help: 'Token OAuth2 Google (rafraîchissez régulièrement)' },
+      { key: 'account_id', label: 'Account ID', placeholder: 'accounts/123456', help: 'ID de votre compte Google My Business' },
+      { key: 'location_id', label: 'Location ID', placeholder: 'locations/123456', help: 'ID de l\'établissement à publier' },
+    ],
+  };
+
+  return (
+    <div className="max-w-2xl">
+      <h2 className="text-2xl font-bold text-slate-900 mb-1">Paramètres</h2>
+      <p className="text-slate-500 mb-6">Configurez vos clés API pour publier sur les réseaux sociaux</p>
+
+      {/* Statut clé Anthropic */}
+      <div className={`mb-8 p-4 rounded-xl border ${apiKeyOk ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+        <div className="flex items-center gap-2">
+          <span className="text-xl">{apiKeyOk ? '✅' : '❌'}</span>
+          <div>
+            <div className={`font-semibold text-sm ${apiKeyOk ? 'text-green-700' : 'text-red-700'}`}>
+              {apiKeyOk ? 'Clé API Anthropic configurée' : 'Clé API Anthropic manquante'}
+            </div>
+            <div className={`text-xs ${apiKeyOk ? 'text-green-600' : 'text-red-600'}`}>
+              {apiKeyOk ? 'La génération IA est opérationnelle' : 'Ajoutez ANTHROPIC_API_KEY dans le fichier .env puis redémarrez'}
+            </div>
+          </div>
+          {apiKeyOk && <a href="https://console.anthropic.com/" target="_blank" rel="noopener" className="ml-auto text-xs text-green-600 underline">Console →</a>}
+          {!apiKeyOk && <a href="https://console.anthropic.com/" target="_blank" rel="noopener" className="ml-auto text-xs text-red-600 underline">Obtenir une clé →</a>}
+        </div>
+      </div>
+
+      {/* ── Ayrshare : connexion facile ── */}
+      <div className="mb-8 bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-300 rounded-2xl p-5 shadow-sm">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-2xl">🚀</span>
+          <span className="font-bold text-slate-800 text-lg">Ayrshare</span>
+          <span className="bg-emerald-100 text-emerald-700 text-xs px-2.5 py-1 rounded-full font-bold">RECOMMANDÉ</span>
+          {ayrshareOk && <span className="ml-auto bg-green-100 text-green-700 text-xs px-2.5 py-1 rounded-full font-semibold">✓ Actif</span>}
+        </div>
+        <p className="text-sm text-slate-600 mb-4">
+          Connectez tous vos réseaux en <strong>3 clics</strong> sur leur site — pas d'app développeur, pas de token complexe. Une seule clé API suffit pour tout publier.
+        </p>
+
+        {/* Étapes visuelles */}
+        <div className="grid grid-cols-3 gap-2 mb-5">
+          {[
+            { n: '1', label: 'Créer un compte', sub: 'Gratuit sur ayrshare.com', lien: 'https://app.ayrshare.com/signup' },
+            { n: '2', label: 'Connecter vos réseaux', sub: 'Boutons Instagram, Facebook, TikTok, GMB…', lien: 'https://app.ayrshare.com/dashboard' },
+            { n: '3', label: 'Copier la clé API', sub: 'Dans Profile > API Key', lien: 'https://app.ayrshare.com/profile' },
+          ].map(s => (
+            <a key={s.n} href={s.lien} target="_blank" rel="noopener"
+              className="flex flex-col items-center text-center bg-white border border-emerald-200 rounded-xl p-3 hover:border-emerald-400 hover:shadow-sm transition-all">
+              <div className="w-7 h-7 rounded-full bg-emerald-500 text-white font-bold text-sm flex items-center justify-center mb-1.5">{s.n}</div>
+              <div className="text-xs font-semibold text-slate-700">{s.label}</div>
+              <div className="text-xs text-slate-400 mt-0.5 leading-tight">{s.sub}</div>
+              <div className="text-xs text-emerald-600 mt-1">Ouvrir →</div>
+            </a>
+          ))}
+        </div>
+
+        {/* Champ clé API */}
+        <div className="flex gap-2">
+          <input type="text" value={ayrshareKey} onChange={e => setAyrshareKey(e.target.value)}
+            placeholder="Collez votre clé API Ayrshare ici…"
+            className="flex-1 border border-emerald-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 font-mono bg-white" />
+          <button onClick={saveAyrshare} disabled={!ayrshareKey || saving === 'ayrshare'}
+            className="bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-all flex items-center gap-2 disabled:opacity-50">
+            {saving === 'ayrshare' ? <Spinner size={4} /> : '💾'} Sauvegarder
+          </button>
+        </div>
+
+        <div className="mt-3 text-xs text-slate-500">
+          Gratuit jusqu'à 3 réseaux · 30 posts/mois — <a href="https://www.ayrshare.com/pricing/" target="_blank" rel="noopener" className="text-emerald-600 underline">voir les tarifs</a>
+        </div>
+      </div>
+
+      {/* ── Configs avancées (direct API) ── */}
+      <details className="mb-4">
+        <summary className="cursor-pointer text-sm font-semibold text-slate-500 hover:text-slate-700 flex items-center gap-2 select-none">
+          ⚙️ Configuration avancée (API directe — sans Ayrshare)
+          <span className="text-xs font-normal text-slate-400">— cliquez pour développer</span>
+        </summary>
+        <p className="text-xs text-slate-400 mt-2 mb-4">Nécessite de créer une app développeur sur chaque réseau. Utilisez le "Guide de connexion" dans chaque carte.</p>
+      </details>
+
+      <div className="space-y-6">
+        {PLATFORMS.map(plat => {
+          const fields = platformFields[plat.id];
+          const isConfigured = !!configs[plat.id];
+
+          return (
+            <div key={plat.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <span style={{ color: plat.color }}>{plat.icon}</span>
+                <span className="font-semibold text-slate-800">{plat.name}</span>
+                {isConfigured && <span className="ml-auto text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-medium">Configuré ✓</span>}
+              </div>
+
+              <div className="space-y-3">
+                {fields.map(field => (
+                  <div key={field.key}>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">{field.label}</label>
+                    <input
+                      type="text"
+                      placeholder={field.placeholder}
+                      value={forms[plat.id][field.key]}
+                      onChange={e => setForms(f => ({ ...f, [plat.id]: { ...f[plat.id], [field.key]: e.target.value } }))}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 font-mono"
+                    />
+                    <p className="text-xs text-slate-400 mt-0.5">{field.help}</p>
+                  </div>
+                ))}
+              </div>
+
+              <button onClick={() => save(plat.id)} disabled={saving === plat.id}
+                className="mt-4 bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-700 transition-all flex items-center gap-2 disabled:opacity-60">
+                {saving === plat.id ? <Spinner size={4} /> : '💾'} Sauvegarder
+              </button>
+
+              <PlatformGuide
+                platformId={plat.id}
+                open={openGuide === plat.id}
+                onToggle={() => setOpenGuide(openGuide === plat.id ? '' : plat.id)}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Note */}
+      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-700">
+        <strong>Note :</strong> Pour Instagram, la photo/vidéo doit être accessible depuis une URL publique.
+        Si vous utilisez l'app en local, configurez <code className="bg-blue-100 px-1 rounded">BASE_URL</code> dans <code className="bg-blue-100 px-1 rounded">.env</code> avec une URL publique (ex: via ngrok).
+      </div>
+    </div>
+  );
+}
+
+// ─── Vue : Mon Business ──────────────────────────────────────────────────────
+
+function BusinessView({ showToast, onProfileSaved }) {
+  const EMPTY = { nom: '', secteur: '', description: '', audience: '', valeurs: '', site: '' };
+  const [profile, setProfile] = useState(EMPTY);
+  const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
+
+  useEffect(() => {
+    api('/api/business').then(data => {
+      if (data && Object.keys(data).length > 0) setProfile(p => ({ ...p, ...data }));
+    }).catch(() => {});
+  }, []);
+
+  const set = (key, val) => setProfile(p => ({ ...p, [key]: val }));
+
+  const generateProfile = async () => {
+    if (!profile.nom.trim()) { showToast('Entrez d\'abord le nom de votre commerce', 'error'); return; }
+    setGenerating(true);
+    try {
+      const data = await api('/api/business/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: profile.nom }),
+      });
+      setProfile(p => ({ ...p, ...data }));
+      showToast('Profil généré ! Vérifiez et ajustez si besoin.', 'success');
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api('/api/business', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profile),
+      });
+      onProfileSaved(profile.nom);
+      showToast('Profil sauvegardé ! Claude l\'utilisera pour tous vos posts.', 'success');
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isComplete = profile.nom && profile.description;
+
+  return (
+    <div className="max-w-2xl">
+      <div className="flex items-center gap-3 mb-1">
+        <h2 className="text-2xl font-bold text-slate-900">Mon Business</h2>
+        {isComplete && <span className="bg-green-100 text-green-700 text-xs px-2.5 py-1 rounded-full font-semibold">✓ Actif</span>}
+      </div>
+      <p className="text-slate-500 mb-7">Ces infos sont mémorisées et utilisées automatiquement par l'IA à chaque génération de post.</p>
+
+      {/* Nom + bouton IA */}
+      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl p-5 mb-6">
+        <label className="block text-sm font-semibold text-slate-700 mb-2">🏢 Nom de votre commerce</label>
+        <div className="flex gap-2">
+          <input type="text" value={profile.nom} onChange={e => set('nom', e.target.value)}
+            placeholder="Ex: La Boulangerie du Coin, Studio Photo Alex..."
+            className="flex-1 border border-indigo-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white" />
+          <button onClick={generateProfile} disabled={generating || !profile.nom.trim()}
+            className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-all flex items-center gap-2 disabled:opacity-50 whitespace-nowrap">
+            {generating ? <><Spinner size={4} /> Analyse...</> : '✨ Générer le profil'}
+          </button>
+        </div>
+        <p className="text-xs text-indigo-500 mt-2">Tapez votre nom et cliquez "Générer le profil" — l'IA créera automatiquement votre description.</p>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Secteur d'activité</label>
+          <input type="text" value={profile.secteur} onChange={e => set('secteur', e.target.value)}
+            placeholder="Ex: Restauration, Mode, Beauté, Artisanat, Services..."
+            className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Description de votre activité</label>
+          <textarea value={profile.description} onChange={e => set('description', e.target.value)} rows={3}
+            placeholder="Ex: Pizzeria artisanale spécialisée dans les pizzas au feu de bois avec des produits locaux..."
+            className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none" />
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Votre clientèle habituelle</label>
+          <input type="text" value={profile.audience} onChange={e => set('audience', e.target.value)}
+            placeholder="Ex: Familles et professionnels de 25-50 ans, passionnés de cuisine..."
+            className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Valeurs & personnalité</label>
+          <input type="text" value={profile.valeurs} onChange={e => set('valeurs', e.target.value)}
+            placeholder="Ex: Authenticité, qualité artisanale, convivialité, local..."
+            className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+            Site web <span className="text-slate-400 normal-case font-normal">(optionnel)</span>
+          </label>
+          <input type="text" value={profile.site} onChange={e => set('site', e.target.value)}
+            placeholder="Ex: www.moncommerce.fr"
+            className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+        </div>
+      </div>
+
+      {/* Aperçu du profil actif */}
+      {isComplete && (
+        <div className="mt-6 bg-slate-50 border border-slate-200 rounded-2xl p-4">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Ce que Claude sait sur vous</div>
+          <div className="space-y-1.5 text-sm text-slate-700">
+            <div><span className="font-semibold">Commerce :</span> {profile.nom}</div>
+            {profile.secteur && <div><span className="font-semibold">Secteur :</span> {profile.secteur}</div>}
+            <div><span className="font-semibold">Activité :</span> {profile.description}</div>
+            {profile.audience && <div><span className="font-semibold">Clientèle :</span> {profile.audience}</div>}
+            {profile.valeurs && <div><span className="font-semibold">Valeurs :</span> {profile.valeurs}</div>}
+            {profile.site && <div><span className="font-semibold">Site :</span> {profile.site}</div>}
+          </div>
+        </div>
+      )}
+
+      <button onClick={save} disabled={saving || !profile.nom.trim()}
+        className="mt-6 w-full bg-slate-900 text-white py-3 rounded-xl font-semibold hover:bg-slate-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+        {saving ? <><Spinner size={4} /> Sauvegarde...</> : '💾 Sauvegarder mon profil business'}
+      </button>
+    </div>
+  );
+}
+
+// ─── Navigation mobile (barre du bas) ────────────────────────────────────────
+
+function MobileNav({ view, setView, postsCount }) {
+  const items = [
+    { id: 'create',   label: 'Créer',    icon: '✨' },
+    { id: 'posts',    label: 'Posts',    icon: '📅', badge: postsCount },
+    { id: 'business', label: 'Business', icon: '🏢' },
+    { id: 'settings', label: 'Réglages', icon: '⚙️' },
+  ];
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex z-50 lg:hidden safe-bottom">
+      {items.map(item => (
+        <button key={item.id} onClick={() => setView(item.id)}
+          className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 transition-all ${
+            view === item.id ? 'text-indigo-600' : 'text-slate-400 active:text-indigo-400'
+          }`}>
+          <span className="text-xl relative">
+            {item.icon}
+            {item.badge > 0 && (
+              <span className="absolute -top-1 -right-2 bg-indigo-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none font-bold">
+                {item.badge}
+              </span>
+            )}
+          </span>
+          <span className="text-xs font-medium">{item.label}</span>
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+// ─── Bannière d'installation PWA ─────────────────────────────────────────────
+
+function InstallBanner() {
+  const [prompt, setPrompt] = useState(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setPrompt(e); setVisible(true); };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <div className="fixed top-0 left-0 right-0 z-50 bg-indigo-600 text-white px-4 py-3 flex items-center gap-3 shadow-lg lg:hidden">
+      <span className="text-2xl">📲</span>
+      <div className="flex-1">
+        <div className="text-sm font-semibold">Installer l'application</div>
+        <div className="text-xs opacity-80">Accès rapide depuis votre écran d'accueil</div>
+      </div>
+      <button onClick={async () => { if (prompt) { prompt.prompt(); const r = await prompt.userChoice; if (r.outcome === 'accepted') setVisible(false); } }}
+        className="bg-white text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-bold">
+        Installer
+      </button>
+      <button onClick={() => setVisible(false)} className="opacity-60 text-lg leading-none">×</button>
+    </div>
+  );
+}
+
+// ─── App principale ───────────────────────────────────────────────────────────
+
+function App() {
+  const [view, setView] = useState('create');
+  const [toast, setToast] = useState(null);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [bizName, setBizName] = useState('');
+
+  const showToast = (message, type = 'info') => setToast({ message, type });
+
+  const refreshCount = async () => {
+    try {
+      const posts = await api('/api/posts');
+      setPendingCount(posts.filter(p => p.status === 'pending').length);
+    } catch {}
+  };
+
+  useEffect(() => {
+    refreshCount();
+    api('/api/business').then(d => { if (d?.nom) setBizName(d.nom); }).catch(() => {});
+  }, []);
+
+  return (
+    <div className="min-h-screen flex bg-slate-50">
+      <InstallBanner />
+
+      {/* Sidebar desktop uniquement */}
+      <div className="hidden lg:block">
+        <Sidebar view={view} setView={setView} postsCount={pendingCount} bizName={bizName} />
+      </div>
+
+      {/* Contenu principal */}
+      <main className="flex-1 lg:ml-60 min-h-screen">
+        {/* Header mobile */}
+        <div className="lg:hidden bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-2.5 sticky top-0 z-40">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold">S</div>
+          <div>
+            <div className="font-bold text-slate-900 text-sm leading-tight">Social Post Creator</div>
+            {bizName && <div className="text-xs text-indigo-500">🏢 {bizName}</div>}
+          </div>
+        </div>
+
+        {/* Vue active — padding bas pour la nav mobile */}
+        <div className="p-4 lg:p-8 pb-24 lg:pb-8">
+          <div className="max-w-5xl mx-auto">
+            {view === 'create'   && <CreateView showToast={showToast} onPostCreated={refreshCount} />}
+            {view === 'posts'    && <PostsView showToast={showToast} onRefresh={refreshCount} />}
+            {view === 'business' && <BusinessView showToast={showToast} onProfileSaved={name => setBizName(name)} />}
+            {view === 'settings' && <SettingsView showToast={showToast} />}
+          </div>
+        </div>
+      </main>
+
+      {/* Nav mobile bas de page */}
+      <MobileNav view={view} setView={setView} postsCount={pendingCount} />
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+// Enregistrement du Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
