@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- ═══════════════════════════════════════
+       SEO — REMPLACER les infos en [MAJUSCULES]
+  ═══════════════════════════════════════ -->
+  <title>Pizz'en Seyne — Pizzeria artisanale à [VOTRE VILLE]</title>
+  <meta name="description" content="Pizz'en Seyne, pizzeria artisanale à [VOTRE VILLE]. Pâte napolitaine maison, ingrédients frais, cuisson au four à bois. Commandez ou venez nous rendre visite !">
+  <meta name="keywords" content="pizzeria [VOTRE VILLE], pizza napolitaine, pizza artisanale, Pizz'en Seyne, livraison pizza [VOTRE VILLE]">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="Pizz'en Seyne">
+  <link rel="canonical" href="https://[VOTRE-DOMAINE].fr/">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="restaurant">
+  <meta property="og:title" content="Pizz'en Seyne — La passion mène à l'exigence">
+  <meta property="og:description" content="Pizzeria artisanale. Pâte napolitaine maison, ingrédients frais, cuisson au four à bois.">
+  <meta property="og:image" content="images/logo.png">
+  <meta property="og:locale" content="fr_FR">
+
+  <!-- Favicons -->
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="apple-touch-icon" href="images/logo.png">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- ═══════════════════════════════════════
+       DONNÉES STRUCTURÉES (SEO local)
+  ═══════════════════════════════════════ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Restaurant",
+    "name": "Pizz'en Seyne",
+    "description": "Pizzeria artisanale. Pâte napolitaine maison, ingrédients frais, cuisson au four à bois. La passion mène à l'exigence.",
+    "image": "images/logo.png",
+    "url": "https://[VOTRE-DOMAINE].fr/",
+    "telephone": "[VOTRE-TELEPHONE]",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "[VOTRE ADRESSE]",
+      "addressLocality": "[VOTRE VILLE]",
+      "postalCode": "[CODE POSTAL]",
+      "addressCountry": "FR"
+    },
+    "servesCuisine": ["Pizza", "Cuisine italienne"],
+    "priceRange": "€€",
+    "openingHoursSpecification": [
+      {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+        "opens": "11:30",
+        "closes": "14:00"
+      },
+      {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+        "opens": "18:30",
+        "closes": "22:00"
+      }
+    ],
+    "menu": "https://[VOTRE-DOMAINE].fr/#menu",
+    "hasMap": "https://maps.google.com/?q=[VOTRE-ADRESSE]",
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "reviewCount": "142"
+    }
+  }
+  </script>
+
+  <style>
+    /* ════════════════════════════════════
+       RESET & VARIABLES
+    ════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #111010;
+      --bg2:       #1a1916;
+      --bg3:       #201e1b;
+      --red:       #c8102e;
+      --red-light: #e63946;
+      --green:     #2d6a4f;
+      --gold:      #c9a84c;
+      --text:      #f0ede8;
+      --muted:     #a09a8e;
+      --border:    rgba(255,255,255,.08);
+      --font-serif: 'Playfair Display', Georgia, serif;
+      --font-sans:  'Inter', system-ui, sans-serif;
+      --radius:    1rem;
+      --max-w:     1200px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 16px;
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    img { max-width: 100%; height: auto; display: block; }
+    a { color: inherit; text-decoration: none; }
+    ul { list-style: none; }
+
+    .container {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    /* ════════════════════════════════════
+       TYPOGRAPHY
+    ════════════════════════════════════ */
+    h1, h2, h3 {
+      font-family: var(--font-serif);
+      line-height: 1.2;
+    }
+
+    .section-label {
+      font-size: .75rem;
+      font-weight: 600;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: .75rem;
+    }
+
+    .section-title {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 900;
+      color: var(--text);
+      margin-bottom: 1rem;
+    }
+
+    .section-title em {
+      font-style: italic;
+      color: var(--gold);
+    }
+
+    .section-desc {
+      color: var(--muted);
+      font-size: 1.05rem;
+      max-width: 520px;
+    }
+
+    /* ════════════════════════════════════
+       NAVIGATION
+    ════════════════════════════════════ */
+    .nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 1rem 0;
+      transition: background .3s, padding .3s;
+    }
+
+    .nav.scrolled {
+      background: rgba(17,16,16,.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: .6rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav__inner {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+    }
+
+    .nav__logo {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      flex-shrink: 0;
+    }
+
+    .nav__logo img {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .nav__name {
+      font-family: var(--font-serif);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.1;
+    }
+
+    .nav__tagline {
+      font-size: .65rem;
+      color: var(--gold);
+      letter-spacing: .05em;
+    }
+
+    .nav__links {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+    }
+
+    .nav__links a {
+      font-size: .9rem;
+      font-weight: 500;
+      color: var(--muted);
+      transition: color .2s;
+      white-space: nowrap;
+    }
+
+    .nav__links a:hover { color: var(--text); }
+
+    .nav__cta {
+      background: var(--red);
+      color: #fff !important;
+      padding: .55rem 1.25rem;
+      border-radius: 6px;
+      font-weight: 600 !important;
+      font-size: .85rem !important;
+      transition: background .2s, transform .15s !important;
+    }
+
+    .nav__cta:hover {
+      background: var(--red-light) !important;
+      transform: scale(1.04);
+    }
+
+    .nav__burger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    .nav__burger span {
+      width: 24px;
+      height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: all .25s;
+    }
+
+    .nav__mobile {
+      display: none;
+      flex-direction: column;
+      gap: .25rem;
+      background: var(--bg2);
+      padding: 1rem 1.5rem 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .nav__mobile a {
+      padding: .65rem .5rem;
+      font-size: .95rem;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      transition: color .2s;
+    }
+
+    .nav__mobile a:hover { color: var(--text); }
+    .nav__mobile a:last-child { border: none; }
+
+    @media (max-width: 768px) {
+      .nav__links { display: none; }
+      .nav__burger { display: flex; }
+    }
+
+    /* ════════════════════════════════════
+       HERO
+    ════════════════════════════════════ */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .hero__bg {
+      position: absolute;
+      inset: 0;
+      background: url('images/pizza-napolitaine.jpg') center/cover no-repeat;
+      transform: scale(1.06);
+      transition: transform 8s ease-out;
+    }
+
+    .hero__bg.loaded { transform: scale(1); }
+
+    .hero__overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(17,16,16,.55) 0%,
+        rgba(17,16,16,.70) 60%,
+        rgba(17,16,16,.95) 100%
+      );
+    }
+
+    .hero__content {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 8rem 1.5rem 6rem;
+      max-width: 800px;
+    }
+
+    .hero__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      background: rgba(201,168,76,.15);
+      border: 1px solid rgba(201,168,76,.4);
+      color: var(--gold);
+      padding: .4rem 1rem;
+      border-radius: 100px;
+      font-size: .78rem;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero__title {
+      font-size: clamp(3rem, 9vw, 5.5rem);
+      font-weight: 900;
+      letter-spacing: -.02em;
+      color: #fff;
+      margin-bottom: .5rem;
+      text-shadow: 0 2px 30px rgba(0,0,0,.5);
+    }
+
+    .hero__title em {
+      font-style: italic;
+      color: var(--gold);
+    }
+
+    .hero__tagline {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+      color: rgba(240,237,232,.8);
+      margin-bottom: 2.5rem;
+    }
+
+    .hero__actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: .6rem;
+      padding: .85rem 2rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: .95rem;
+      transition: transform .15s, opacity .2s;
+      cursor: pointer;
+    }
+
+    .btn:hover { transform: scale(1.04); }
+    .btn:active { transform: scale(.98); }
+
+    .btn--primary {
+      background: var(--red);
+      color: #fff;
+    }
+
+    .btn--primary:hover { background: var(--red-light); }
+
+    .btn--outline {
+      background: transparent;
+      color: var(--text);
+      border: 1.5px solid rgba(255,255,255,.35);
+    }
+
+    .btn--outline:hover { border-color: rgba(255,255,255,.7); }
+
+    .hero__scroll {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .4rem;
+      color: var(--muted);
+      font-size: .75rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      animation: bounce 2s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(6px); }
+    }
+
+    /* ════════════════════════════════════
+       BANDEAU ENGAGEMENTS
+    ════════════════════════════════════ */
+    .strip {
+      background: var(--red);
+      padding: .9rem 0;
+      overflow: hidden;
+    }
+
+    .strip__inner {
+      display: flex;
+      align-items: center;
+      gap: 3rem;
+      white-space: nowrap;
+      font-size: .85rem;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.9);
+    }
+
+    .strip__sep {
+      color: rgba(255,255,255,.4);
+      flex-shrink: 0;
+    }
+
+    /* ════════════════════════════════════
+       HISTOIRE
+    ════════════════════════════════════ */
+    .histoire {
+      padding: 7rem 0;
+    }
+
+    .histoire__grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: center;
+    }
+
+    .histoire__img-wrap {
+      position: relative;
+    }
+
+    .histoire__img {
+      width: 100%;
+      aspect-ratio: 4/5;
+      object-fit: cover;
+      border-radius: var(--radius);
+    }
+
+    .histoire__logo-badge {
+      position: absolute;
+      bottom: -1.5rem;
+      right: -1.5rem;
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 4px solid var(--bg);
+      box-shadow: 0 8px 30px rgba(0,0,0,.5);
+    }
+
+    .histoire__text .section-desc { margin-bottom: 2rem; }
+
+    .histoire__values {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .histoire__value {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: .75rem;
+      padding: 1rem 1.1rem;
+    }
+
+    .histoire__value-icon {
+      font-size: 1.4rem;
+      margin-bottom: .4rem;
+    }
+
+    .histoire__value-title {
+      font-weight: 600;
+      font-size: .9rem;
+      color: var(--text);
+      margin-bottom: .2rem;
+    }
+
+    .histoire__value-desc {
+      font-size: .8rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    @media (max-width: 860px) {
+      .histoire__grid { grid-template-columns: 1fr; gap: 3rem; }
+      .histoire__img { aspect-ratio: 16/9; }
+      .histoire__logo-badge { width: 80px; height: 80px; bottom: -1rem; right: -1rem; }
+    }
+
+    /* ════════════════════════════════════
+       MENU
+    ════════════════════════════════════ */
+    .menu {
+      padding: 7rem 0;
+      background: var(--bg2);
+    }
+
+    .menu__header {
+      text-align: center;
+      margin-bottom: 4rem;
+    }
+
+    .menu__header .section-desc {
+      margin: 0 auto;
+    }
+
+    .menu__grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2rem;
+    }
+
+    .pizza-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 1.25rem;
+      overflow: hidden;
+      transition: transform .25s, box-shadow .25s;
+    }
+
+    .pizza-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 50px rgba(0,0,0,.4);
+    }
+
+    .pizza-card__img-wrap {
+      position: relative;
+      overflow: hidden;
+      aspect-ratio: 4/3;
+    }
+
+    .pizza-card__img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform .4s ease;
+    }
+
+    .pizza-card:hover .pizza-card__img { transform: scale(1.06); }
+
+    .pizza-card__badge {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: var(--red);
+      color: #fff;
+      padding: .25rem .7rem;
+      border-radius: 100px;
+      font-size: .75rem;
+      font-weight: 700;
+    }
+
+    .pizza-card__body {
+      padding: 1.5rem;
+    }
+
+    .pizza-card__name {
+      font-family: var(--font-serif);
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: .5rem;
+    }
+
+    .pizza-card__ingr {
+      font-size: .9rem;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+
+    .pizza-card__footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .pizza-card__price {
+      font-family: var(--font-serif);
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: var(--gold);
+    }
+
+    .pizza-card__tag {
+      display: inline-block;
+      background: rgba(45,106,79,.25);
+      color: #6fcf97;
+      border: 1px solid rgba(45,106,79,.4);
+      padding: .2rem .65rem;
+      border-radius: 4px;
+      font-size: .72rem;
+      font-weight: 600;
+    }
+
+    @media (max-width: 700px) {
+      .menu__grid { grid-template-columns: 1fr; }
+    }
+
+    /* ════════════════════════════════════
+       ENGAGEMENTS
+    ════════════════════════════════════ */
+    .engagements {
+      padding: 7rem 0;
+    }
+
+    .engagements__header {
+      text-align: center;
+      margin-bottom: 4rem;
+    }
+
+    .engagements__grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+
+    .engagement-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem 1.5rem;
+      text-align: center;
+      transition: border-color .2s;
+    }
+
+    .engagement-card:hover { border-color: rgba(201,168,76,.3); }
+
+    .engagement-card__icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .engagement-card__title {
+      font-family: var(--font-serif);
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: .5rem;
+    }
+
+    .engagement-card__text {
+      font-size: .9rem;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    @media (max-width: 700px) {
+      .engagements__grid { grid-template-columns: 1fr; }
+    }
+
+    /* ════════════════════════════════════
+       INFOS PRATIQUES
+    ════════════════════════════════════ */
+    .infos {
+      padding: 7rem 0;
+      background: var(--bg2);
+    }
+
+    .infos__grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: start;
+    }
+
+    .infos__block {
+      margin-bottom: 2.5rem;
+    }
+
+    .infos__block-title {
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: .75rem;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+
+    .infos__block-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .infos__list {
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+    }
+
+    .infos__list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: .5rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: .95rem;
+    }
+
+    .infos__list-item:last-child { border: none; }
+
+    .infos__day { color: var(--muted); }
+    .infos__hours { color: var(--text); font-weight: 500; }
+    .infos__closed { color: var(--red-light); font-style: italic; }
+
+    .infos__contact-item {
+      display: flex;
+      align-items: flex-start;
+      gap: .75rem;
+      padding: .75rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: .95rem;
+    }
+
+    .infos__contact-item:last-child { border: none; }
+
+    .infos__contact-icon {
+      color: var(--gold);
+      flex-shrink: 0;
+      font-size: 1.1rem;
+      margin-top: .05rem;
+    }
+
+    .infos__contact-text { color: var(--muted); line-height: 1.5; }
+    .infos__contact-text strong { color: var(--text); display: block; }
+
+    .infos__map {
+      width: 100%;
+      height: 300px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 1rem;
+      color: var(--muted);
+      font-size: .9rem;
+      text-align: center;
+    }
+
+    .infos__map a {
+      color: var(--gold);
+      text-decoration: underline;
+      font-weight: 600;
+    }
+
+    @media (max-width: 800px) {
+      .infos__grid { grid-template-columns: 1fr; gap: 2.5rem; }
+    }
+
+    /* ════════════════════════════════════
+       FOOTER
+    ════════════════════════════════════ */
+    footer {
+      background: #0b0b0a;
+      border-top: 1px solid var(--border);
+      padding: 3rem 0 2rem;
+    }
+
+    .footer__inner {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+    }
+
+    .footer__logo {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+
+    .footer__logo img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+    }
+
+    .footer__name {
+      font-family: var(--font-serif);
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .footer__tagline {
+      font-size: .72rem;
+      color: var(--muted);
+    }
+
+    .footer__links {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    .footer__links a {
+      font-size: .85rem;
+      color: var(--muted);
+      transition: color .2s;
+    }
+
+    .footer__links a:hover { color: var(--text); }
+
+    .footer__copy {
+      width: 100%;
+      text-align: center;
+      font-size: .8rem;
+      color: var(--muted);
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+      margin-top: 1.5rem;
+    }
+
+    /* ════════════════════════════════════
+       DIVIDER DÉCORATIF
+    ════════════════════════════════════ */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .divider span {
+      color: var(--gold);
+      font-size: 1rem;
+    }
+
+    /* ════════════════════════════════════
+       RÉVÉLATION AU SCROLL
+    ════════════════════════════════════ */
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity .6s ease, transform .6s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .reveal-delay-1 { transition-delay: .1s; }
+    .reveal-delay-2 { transition-delay: .2s; }
+    .reveal-delay-3 { transition-delay: .3s; }
+  </style>
+</head>
+
+<body>
+
+  <!-- ════════════════════════════════════
+       NAVIGATION
+  ════════════════════════════════════ -->
+  <header>
+    <nav class="nav" id="nav" role="navigation" aria-label="Navigation principale">
+      <div class="nav__inner">
+        <a href="/" class="nav__logo" aria-label="Pizz'en Seyne — Accueil">
+          <img src="images/logo.png" alt="Logo Pizz'en Seyne" width="44" height="44">
+          <div>
+            <div class="nav__name">Pizz'en Seyne</div>
+            <div class="nav__tagline">La passion mène à l'exigence</div>
+          </div>
+        </a>
+
+        <ul class="nav__links" role="list">
+          <li><a href="#histoire">Notre histoire</a></li>
+          <li><a href="#menu">La carte</a></li>
+          <li><a href="#engagements">Nos engagements</a></li>
+          <li><a href="#infos">Contact &amp; Horaires</a></li>
+          <li><a href="tel:[VOTRE-TELEPHONE]" class="nav__cta" aria-label="Nous appeler pour une commande">📞 Commander</a></li>
+        </ul>
+
+        <button class="nav__burger" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="mobile-nav" onclick="toggleNav(this)">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+
+      <div class="nav__mobile" id="mobile-nav" role="navigation" aria-label="Menu mobile">
+        <a href="#histoire" onclick="closeNav()">Notre histoire</a>
+        <a href="#menu" onclick="closeNav()">La carte</a>
+        <a href="#engagements" onclick="closeNav()">Nos engagements</a>
+        <a href="#infos" onclick="closeNav()">Contact &amp; Horaires</a>
+        <a href="tel:[VOTRE-TELEPHONE]" style="color:var(--gold);font-weight:600">📞 Commander</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- ════════════════════════════════════
+         HÉRO
+    ════════════════════════════════════ -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero__bg" id="hero-bg" aria-hidden="true"></div>
+      <div class="hero__overlay" aria-hidden="true"></div>
+
+      <div class="hero__content">
+        <div class="hero__badge">
+          🍕 Pizzeria artisanale · Four à bois
+        </div>
+        <h1 id="hero-title" class="hero__title">
+          Pizz'<em>en</em><br>Seyne
+        </h1>
+        <p class="hero__tagline">La passion mène à l'exigence</p>
+
+        <div class="hero__actions">
+          <a href="#menu" class="btn btn--primary">
+            Découvrir la carte
+          </a>
+          <a href="#infos" class="btn btn--outline">
+            Horaires &amp; Contact
+          </a>
+        </div>
+      </div>
+
+      <div class="hero__scroll" aria-hidden="true">
+        <span>Découvrir</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 9l-7 7-7-7"/>
+        </svg>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════
+         BANDEAU
+    ════════════════════════════════════ -->
+    <div class="strip" aria-hidden="true">
+      <div class="container">
+        <div class="strip__inner">
+          <span>🌿 Ingrédients frais</span>
+          <span class="strip__sep">✦</span>
+          <span>🔥 Four à bois</span>
+          <span class="strip__sep">✦</span>
+          <span>🇮🇹 Pâte napolitaine maison</span>
+          <span class="strip__sep">✦</span>
+          <span>❤️ Fait avec passion</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════
+         NOTRE HISTOIRE
+    ════════════════════════════════════ -->
+    <section id="histoire" class="histoire" aria-labelledby="histoire-title">
+      <div class="container">
+        <div class="histoire__grid">
+          <div class="histoire__img-wrap reveal">
+            <img
+              src="images/pizza-forestiere.jpg"
+              alt="Pizza forestière Pizz'en Seyne — champignons des bois, parmesan, crème de cèpes"
+              class="histoire__img"
+              loading="lazy"
+              width="600"
+              height="750"
+            >
+            <img
+              src="images/logo.png"
+              alt="Logo Pizz'en Seyne"
+              class="histoire__logo-badge"
+              loading="lazy"
+              width="110"
+              height="110"
+            >
+          </div>
+
+          <div class="histoire__text">
+            <div class="section-label reveal">Notre histoire</div>
+            <h2 id="histoire-title" class="section-title reveal reveal-delay-1">
+              Une pizzeria née d'une <em>vraie passion</em>
+            </h2>
+            <p class="section-desc reveal reveal-delay-2" style="margin-bottom:1.5rem">
+              Chez Pizz'en Seyne, chaque pizza est une déclaration d'amour à la tradition napolitaine.
+              Notre pâte repose de longues heures, nos ingrédients sont soigneusement sélectionnés,
+              et notre four à bois sublime chaque création.
+            </p>
+            <p class="section-desc reveal reveal-delay-2">
+              Parce que la passion mène à l'exigence, nous refusons les compromis.
+              Chaque détail compte, de la farine à la cuisson, pour vous offrir la meilleure pizza possible.
+            </p>
+
+            <div class="divider reveal reveal-delay-2"><span>✦</span></div>
+
+            <div class="histoire__values reveal reveal-delay-3">
+              <div class="histoire__value">
+                <div class="histoire__value-icon">🌾</div>
+                <div class="histoire__value-title">Pâte maison</div>
+                <div class="histoire__value-desc">24h de fermentation pour une pâte légère et savoureuse</div>
+              </div>
+              <div class="histoire__value">
+                <div class="histoire__value-icon">🔥</div>
+                <div class="histoire__value-title">Four à bois</div>
+                <div class="histoire__value-desc">Cuisson à 450°C pour un bord doré et croustillant</div>
+              </div>
+              <div class="histoire__value">
+                <div class="histoire__value-icon">🌿</div>
+                <div class="histoire__value-title">Ingrédients frais</div>
+                <div class="histoire__value-desc">Tomates San Marzano, mozzarella di bufala, herbes du jour</div>
+              </div>
+              <div class="histoire__value">
+                <div class="histoire__value-icon">❤️</div>
+                <div class="histoire__value-title">Fait avec amour</div>
+                <div class="histoire__value-desc">Chaque pizza préparée à la main, avec soin et attention</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════
+         LA CARTE
+    ════════════════════════════════════ -->
+    <section id="menu" class="menu" aria-labelledby="menu-title">
+      <div class="container">
+        <header class="menu__header">
+          <div class="section-label reveal">La carte</div>
+          <h2 id="menu-title" class="section-title reveal reveal-delay-1">
+            Nos <em>créations</em>
+          </h2>
+          <p class="section-desc reveal reveal-delay-2">
+            Des pizzas napolitaines généreuses, préparées à la main, cuites au four à bois.
+            <!-- Remplacer les prix et descriptions selon votre carte réelle -->
+          </p>
+        </header>
+
+        <div class="menu__grid">
+
+          <!-- Pizza 1 -->
+          <article class="pizza-card reveal">
+            <div class="pizza-card__img-wrap">
+              <img
+                src="images/pizza-napolitaine.jpg"
+                alt="La Napolitaine — pizza jambon de pays, olives noires, basilic, œuf frais"
+                class="pizza-card__img"
+                loading="lazy"
+                width="600"
+                height="450"
+              >
+              <span class="pizza-card__badge">Signature</span>
+            </div>
+            <div class="pizza-card__body">
+              <h3 class="pizza-card__name">La Napolitaine</h3>
+              <p class="pizza-card__ingr">
+                Tomate San Marzano · Mozzarella · Jambon de pays · Olives noires · Basilic frais · Œuf frais
+              </p>
+              <div class="pizza-card__footer">
+                <span class="pizza-card__price">14 €</span>
+                <!-- Remplacer le prix -->
+                <span class="pizza-card__tag">Classique</span>
+              </div>
+            </div>
+          </article>
+
+          <!-- Pizza 2 -->
+          <article class="pizza-card reveal reveal-delay-1">
+            <div class="pizza-card__img-wrap">
+              <img
+                src="images/pizza-vegetarienne.jpg"
+                alt="La Végétarienne — pizza poivrons multicolores, champignons, aubergines, pesto maison"
+                class="pizza-card__img"
+                loading="lazy"
+                width="600"
+                height="450"
+              >
+              <span class="pizza-card__badge" style="background:var(--green)">100% Végé</span>
+            </div>
+            <div class="pizza-card__body">
+              <h3 class="pizza-card__name">La Végétarienne</h3>
+              <p class="pizza-card__ingr">
+                Tomate · Poivrons tricolores · Champignons · Olives · Aubergines grillées · Pesto maison
+              </p>
+              <div class="pizza-card__footer">
+                <span class="pizza-card__price">13 €</span>
+                <span class="pizza-card__tag">Végétarien</span>
+              </div>
+            </div>
+          </article>
+
+          <!-- Pizza 3 -->
+          <article class="pizza-card reveal reveal-delay-2">
+            <div class="pizza-card__img-wrap">
+              <img
+                src="images/pizza-caprese.jpg"
+                alt="La Caprese — pizza mozzarella, roquette, tomates cerises, radicchio, vinaigre balsamique"
+                class="pizza-card__img"
+                loading="lazy"
+                width="600"
+                height="450"
+              >
+            </div>
+            <div class="pizza-card__body">
+              <h3 class="pizza-card__name">La Caprese</h3>
+              <p class="pizza-card__ingr">
+                Crème · Mozzarella di bufala · Tomates cerises · Roquette · Radicchio · Réduction balsamique
+              </p>
+              <div class="pizza-card__footer">
+                <span class="pizza-card__price">15 €</span>
+                <span class="pizza-card__tag">Végétarien</span>
+              </div>
+            </div>
+          </article>
+
+          <!-- Pizza 4 -->
+          <article class="pizza-card reveal reveal-delay-3">
+            <div class="pizza-card__img-wrap">
+              <img
+                src="images/pizza-forestiere.jpg"
+                alt="La Forestière — pizza crème de cèpes, champignons des bois, parmesan, mesclun"
+                class="pizza-card__img"
+                loading="lazy"
+                width="600"
+                height="450"
+              >
+              <span class="pizza-card__badge" style="background:var(--gold);color:#111">Chef</span>
+            </div>
+            <div class="pizza-card__body">
+              <h3 class="pizza-card__name">La Forestière</h3>
+              <p class="pizza-card__ingr">
+                Crème de cèpes · Mélange de champignons des bois · Mozzarella · Copeaux de parmesan · Herbes fraîches
+              </p>
+              <div class="pizza-card__footer">
+                <span class="pizza-card__price">16 €</span>
+                <span class="pizza-card__tag">Végétarien</span>
+              </div>
+            </div>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════
+         NOS ENGAGEMENTS
+    ════════════════════════════════════ -->
+    <section id="engagements" class="engagements" aria-labelledby="engagements-title">
+      <div class="container">
+        <header class="engagements__header">
+          <div class="section-label reveal">Nos engagements</div>
+          <h2 id="engagements-title" class="section-title reveal reveal-delay-1">
+            La <em>qualité</em> avant tout
+          </h2>
+          <p class="section-desc reveal reveal-delay-2" style="margin:0 auto">
+            Des choix assumés pour des pizzas qui font la différence.
+          </p>
+        </header>
+
+        <div class="engagements__grid">
+          <div class="engagement-card reveal">
+            <div class="engagement-card__icon">🌾</div>
+            <h3 class="engagement-card__title">Pâte napolitaine</h3>
+            <p class="engagement-card__text">
+              Notre pâte est préparée chaque matin avec une farine de type 00 et fermentée 24 heures pour une digestibilité et une saveur incomparables.
+            </p>
+          </div>
+
+          <div class="engagement-card reveal reveal-delay-1">
+            <div class="engagement-card__icon">🍅</div>
+            <h3 class="engagement-card__title">Tomates San Marzano</h3>
+            <p class="engagement-card__text">
+              Nous utilisons exclusivement des tomates San Marzano DOP, réputées pour leur douceur naturelle et leur faible acidité.
+            </p>
+          </div>
+
+          <div class="engagement-card reveal reveal-delay-2">
+            <div class="engagement-card__icon">🔥</div>
+            <h3 class="engagement-card__title">Four à bois 450°C</h3>
+            <p class="engagement-card__text">
+              La cuisson à très haute température en 90 secondes crée le bord bombé et le fond croustillant caractéristiques de la vraie pizza napolitaine.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════
+         INFOS PRATIQUES
+    ════════════════════════════════════ -->
+    <section id="infos" class="infos" aria-labelledby="infos-title">
+      <div class="container">
+        <div class="section-label reveal">Infos pratiques</div>
+        <h2 id="infos-title" class="section-title reveal reveal-delay-1">
+          Venez nous <em>rendre visite</em>
+        </h2>
+
+        <div class="infos__grid" style="margin-top:3rem">
+
+          <div>
+            <div class="infos__block reveal">
+              <div class="infos__block-title">Horaires d'ouverture</div>
+              <ul class="infos__list">
+                <li class="infos__list-item">
+                  <span class="infos__day">Lundi</span>
+                  <span class="infos__closed">Fermé</span>
+                </li>
+                <li class="infos__list-item">
+                  <span class="infos__day">Mardi – Dimanche</span>
+                  <span class="infos__hours">11h30–14h / 18h30–22h</span>
+                </li>
+              </ul>
+              <!-- REMPLACER : vos vrais horaires ci-dessus -->
+            </div>
+
+            <div class="infos__block reveal reveal-delay-1">
+              <div class="infos__block-title">Contact &amp; Adresse</div>
+              <div>
+                <div class="infos__contact-item">
+                  <span class="infos__contact-icon">📍</span>
+                  <div class="infos__contact-text">
+                    <strong>[VOTRE ADRESSE COMPLÈTE]</strong>
+                    [CODE POSTAL] [VOTRE VILLE]
+                  </div>
+                </div>
+                <div class="infos__contact-item">
+                  <span class="infos__contact-icon">📞</span>
+                  <div class="infos__contact-text">
+                    <strong>Téléphone</strong>
+                    <a href="tel:[VOTRE-TELEPHONE]" style="color:var(--gold)">[VOTRE-TELEPHONE]</a>
+                  </div>
+                </div>
+                <div class="infos__contact-item">
+                  <span class="infos__contact-icon">📧</span>
+                  <div class="infos__contact-text">
+                    <strong>Email</strong>
+                    <a href="mailto:[VOTRE-EMAIL]" style="color:var(--gold)">[VOTRE-EMAIL]</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="reveal reveal-delay-2">
+              <a href="tel:[VOTRE-TELEPHONE]" class="btn btn--primary" style="width:100%;justify-content:center">
+                📞 Réserver une table
+              </a>
+            </div>
+          </div>
+
+          <div class="reveal reveal-delay-1">
+            <!-- Remplacer par un vrai iframe Google Maps si souhaité -->
+            <!--
+            <iframe
+              src="https://www.google.com/maps/embed?pb=..."
+              width="100%" height="300" style="border:0;border-radius:1rem"
+              allowfullscreen loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+              title="Localisation Pizz'en Seyne"
+            ></iframe>
+            -->
+            <div class="infos__map" role="region" aria-label="Carte de localisation">
+              <span style="font-size:3rem" aria-hidden="true">📍</span>
+              <div>
+                <strong style="color:var(--text);display:block;margin-bottom:.3rem">[VOTRE ADRESSE]</strong>
+                <a href="https://maps.google.com/?q=Pizz+en+Seyne" target="_blank" rel="noopener noreferrer">
+                  Voir sur Google Maps →
+                </a>
+              </div>
+              <p style="font-size:.8rem;color:var(--muted);max-width:260px">
+                Remplacez ce bloc par un iframe Google Maps pour afficher la carte directement ici.
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ════════════════════════════════════
+       FOOTER
+  ════════════════════════════════════ -->
+  <footer role="contentinfo">
+    <div class="container">
+      <div class="footer__inner">
+        <div class="footer__logo">
+          <img src="images/logo.png" alt="Logo Pizz'en Seyne" width="40" height="40" loading="lazy">
+          <div>
+            <div class="footer__name">Pizz'en Seyne</div>
+            <div class="footer__tagline">La passion mène à l'exigence</div>
+          </div>
+        </div>
+
+        <nav class="footer__links" aria-label="Liens du bas de page">
+          <a href="#histoire">Notre histoire</a>
+          <a href="#menu">La carte</a>
+          <a href="#engagements">Engagements</a>
+          <a href="#infos">Contact</a>
+        </nav>
+      </div>
+
+      <div class="footer__copy">
+        © 2026 Pizz'en Seyne · [VOTRE VILLE] · Tous droits réservés
+        <!-- REMPLACER par votre vraie ville -->
+      </div>
+    </div>
+  </footer>
+
+  <!-- ════════════════════════════════════
+       JAVASCRIPT
+  ════════════════════════════════════ -->
+  <script>
+    // --- Navigation sticky ---
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('scrolled', window.scrollY > 60);
+    }, { passive: true });
+
+    // --- Menu burger ---
+    function toggleNav(btn) {
+      const menu = document.getElementById('mobile-nav');
+      const open = menu.style.display === 'flex';
+      menu.style.display = open ? 'none' : 'flex';
+      btn.setAttribute('aria-expanded', String(!open));
+    }
+    function closeNav() {
+      document.getElementById('mobile-nav').style.display = 'none';
+    }
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        const target = document.querySelector(a.getAttribute('href'));
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          closeNav();
+        }
+      });
+    });
+
+    // --- Révélation au scroll ---
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // --- Hero background lazy load ---
+    const heroBg = document.getElementById('hero-bg');
+    const img = new Image();
+    img.onload = () => {
+      heroBg.style.backgroundImage = "url('images/pizza-napolitaine.jpg')";
+      setTimeout(() => heroBg.classList.add('loaded'), 50);
+    };
+    img.src = 'images/pizza-napolitaine.jpg';
+  </script>
+
+</body>
+</html>
