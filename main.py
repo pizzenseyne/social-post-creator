@@ -739,6 +739,41 @@ async def serve_icon(size: int):
         raise HTTPException(404)
     return FileResponse(str(path), media_type="image/png")
 
+@app.get("/robots.txt")
+async def serve_robots():
+    return FileResponse(str(BASE_DIR / "robots.txt"), media_type="text/plain")
+
+
+@app.get("/sitemap.xml")
+async def serve_sitemap():
+    base_url = os.getenv("BASE_URL", "https://socialpostcreator.fr").rstrip("/")
+    today = datetime.now().strftime("%Y-%m-%d")
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>{base_url}/</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="fr" href="{base_url}/"/>
+  </url>
+  <url>
+    <loc>{base_url}/app</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+</urlset>"""
+    from fastapi.responses import Response
+    return Response(content=xml, media_type="application/xml")
+
+
 @app.get("/")
-async def serve_frontend():
+async def serve_landing():
+    return FileResponse(str(BASE_DIR / "landing.html"))
+
+
+@app.get("/app")
+async def serve_app():
     return FileResponse(str(BASE_DIR / "index.html"))

@@ -1,0 +1,11 @@
+# robots.txt — Social Post Creator
+# https://socialpostcreator.fr/
+
+User-agent: *
+Allow: /
+Allow: /app
+Disallow: /api/
+Disallow: /uploads/
+
+# Sitemap
+Sitemap: https://socialpostcreator.fr/sitemap.xml
