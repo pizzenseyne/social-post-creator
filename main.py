@@ -12,6 +12,7 @@ import shutil
 import mimetypes
 import httpx
 import asyncio
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -742,3 +743,191 @@ async def serve_icon(size: int):
 @app.get("/")
 async def serve_frontend():
     return FileResponse(str(BASE_DIR / "index.html"))
+
+
+# ──────────────────────────────────────────────
+# Génération IA de médias (OpenMontage providers)
+# ──────────────────────────────────────────────
+
+_video_jobs: dict = {}
+
+_OPENAI_SIZES = {"1:1": "1024x1024", "9:16": "1024x1792", "16:9": "1792x1024"}
+_FLUX_SIZES = {"1:1": (1024, 1024), "9:16": (768, 1344), "16:9": (1344, 768)}
+_RUNWAY_RATIOS = {"1:1": "720:720", "9:16": "720:1280", "16:9": "1280:720"}
+
+
+@app.get("/api/ai/capabilities")
+async def ai_capabilities():
+    return {
+        "image": {
+            "openai": bool(os.getenv("OPENAI_API_KEY")),
+            "flux": bool(os.getenv("FAL_KEY")),
+        },
+        "video": {
+            "runway": bool(os.getenv("RUNWAY_API_KEY") or os.getenv("RUNWAYML_API_SECRET")),
+        },
+    }
+
+
+@app.post("/api/ai/image")
+async def generate_ai_image(
+    prompt: str = Form(...),
+    provider: str = Form("openai"),
+    aspect: str = Form("1:1"),
+):
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+
+    if provider == "openai":
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise HTTPException(400, "OPENAI_API_KEY manquante dans le fichier .env")
+        size = _OPENAI_SIZES.get(aspect, "1024x1024")
+        try:
+            from openai import OpenAI as OpenAIClient
+            oai = OpenAIClient(api_key=api_key)
+            resp = oai.images.generate(
+                model="dall-e-3",
+                prompt=prompt,
+                size=size,
+                quality="standard",
+                n=1,
+                response_format="b64_json",
+            )
+            img_bytes = base64.standard_b64decode(resp.data[0].b64_json)
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(500, f"Erreur OpenAI Image: {e}")
+
+    elif provider == "flux":
+        fal_key = os.getenv("FAL_KEY")
+        if not fal_key:
+            raise HTTPException(400, "FAL_KEY manquante dans le fichier .env")
+        w, h = _FLUX_SIZES.get(aspect, (1024, 1024))
+        try:
+            async with httpx.AsyncClient(timeout=120) as client:
+                r = await client.post(
+                    "https://fal.run/fal-ai/flux-pro/v1.1",
+                    headers={"Authorization": f"Key {fal_key}", "Content-Type": "application/json"},
+                    json={"prompt": prompt, "image_size": {"width": w, "height": h}},
+                )
+                r.raise_for_status()
+                data = r.json()
+                img_url = data["images"][0]["url"]
+                img_r = await client.get(img_url, timeout=60)
+                img_r.raise_for_status()
+                img_bytes = img_r.content
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(500, f"Erreur Flux/fal.ai: {e}")
+
+    else:
+        raise HTTPException(400, f"Fournisseur inconnu: {provider}")
+
+    filename = f"{ts}_ai.png"
+    dest = UPLOAD_DIR / filename
+    dest.write_bytes(img_bytes)
+    return {
+        "filename": filename,
+        "path": f"uploads/{filename}",
+        "media_type": "image",
+        "size": dest.stat().st_size,
+        "provider": provider,
+    }
+
+
+async def _run_runway_job(job_id: str, prompt: str, ratio: str, duration: int):
+    api_key = os.getenv("RUNWAY_API_KEY") or os.getenv("RUNWAYML_API_SECRET")
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "X-Runway-Version": "2024-11-06",
+    }
+    try:
+        _video_jobs[job_id]["status"] = "generating"
+        _video_jobs[job_id]["message"] = "Envoi à Runway..."
+
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.post(
+                "https://api.dev.runwayml.com/v1/text_to_video",
+                headers=headers,
+                json={
+                    "model": "gen3a_turbo",
+                    "promptText": prompt,
+                    "duration": duration,
+                    "ratio": ratio,
+                    "watermark": False,
+                },
+            )
+            r.raise_for_status()
+            task_id = r.json()["id"]
+
+        _video_jobs[job_id]["message"] = "Génération en cours..."
+
+        for i in range(72):  # max ~6 minutes
+            await asyncio.sleep(5)
+            async with httpx.AsyncClient(timeout=15) as client:
+                pr = await client.get(
+                    f"https://api.dev.runwayml.com/v1/tasks/{task_id}",
+                    headers=headers,
+                )
+                pr.raise_for_status()
+                task_data = pr.json()
+
+            status = task_data.get("status")
+            if status == "SUCCEEDED":
+                video_url = task_data["output"][0]
+                break
+            if status == "FAILED":
+                raise ValueError(f"Runway a échoué: {task_data.get('failure', 'erreur inconnue')}")
+            _video_jobs[job_id]["message"] = f"Génération... ({(i + 1) * 5}s)"
+        else:
+            raise TimeoutError("Délai dépassé (6 min)")
+
+        _video_jobs[job_id]["message"] = "Téléchargement de la vidéo..."
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        filename = f"{ts}_runway.mp4"
+        dest = UPLOAD_DIR / filename
+
+        async with httpx.AsyncClient(timeout=120) as client:
+            vr = await client.get(video_url)
+            vr.raise_for_status()
+            dest.write_bytes(vr.content)
+
+        _video_jobs[job_id].update({
+            "status": "done",
+            "message": "Vidéo prête !",
+            "filename": filename,
+            "path": f"uploads/{filename}",
+            "media_type": "video",
+            "size": dest.stat().st_size,
+        })
+
+    except Exception as e:
+        _video_jobs[job_id].update({"status": "failed", "error": str(e), "message": "Échec"})
+
+
+@app.post("/api/ai/video")
+async def start_video_generation(
+    prompt: str = Form(...),
+    aspect: str = Form("9:16"),
+    duration: int = Form(5),
+):
+    api_key = os.getenv("RUNWAY_API_KEY") or os.getenv("RUNWAYML_API_SECRET")
+    if not api_key:
+        raise HTTPException(400, "RUNWAY_API_KEY manquante dans le fichier .env")
+
+    job_id = str(uuid.uuid4())
+    ratio = _RUNWAY_RATIOS.get(aspect, "720:1280")
+    _video_jobs[job_id] = {"status": "starting", "message": "Démarrage..."}
+    asyncio.create_task(_run_runway_job(job_id, prompt, ratio, duration))
+    return {"job_id": job_id}
+
+
+@app.get("/api/ai/video/{job_id}")
+async def get_video_job_status(job_id: str):
+    job = _video_jobs.get(job_id)
+    if not job:
+        raise HTTPException(404, "Job de génération introuvable")
+    return job
