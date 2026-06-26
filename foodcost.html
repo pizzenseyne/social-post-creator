@@ -215,6 +215,11 @@
     <div class="tab active"  onclick="switchTab('dashboard')">📊 Dashboard</div>
     <div class="tab"         onclick="switchTab('recipes')">🍕 Recettes</div>
     <div class="tab"         onclick="switchTab('ingredients')">🧀 Ingrédients</div>
+    <div class="tab"         onclick="switchTab('baserecipes')">🥣 Recettes de base</div>
+    <div class="tab"         onclick="switchTab('charges')">💡 Frais fixes</div>
+    <div class="tab"         onclick="switchTab('resale')">🏪 Revente</div>
+    <div class="tab"         onclick="switchTab('suppliers')">📋 Fournisseurs</div>
+    <div class="tab"         onclick="switchTab('prixkg')">⚖️ Calcul prix</div>
     <div class="tab"         onclick="switchTab('rentabilite')">💰 Rentabilité</div>
     <div class="tab"         onclick="switchTab('ai')">🤖 Analyse IA</div>
     <div class="tab"         onclick="switchTab('settings')">⚙️ Paramètres</div>
@@ -284,6 +289,112 @@
     </div>
   </div>
 
+  <!-- ══ RECETTES DE BASE ══════════════════════════════════════ -->
+  <div id="tab-baserecipes" class="tab-content">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2 style="font-size:18px;">Recettes de base <span style="font-size:13px;color:var(--muted)">(pâte, sauce, garnitures…)</span></h2>
+      <button class="btn btn-primary" onclick="openBaseRecipeModal()">+ Nouvelle recette de base</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Créez vos recettes de base (pâton, sauce tomate maison…) pour connaître leur coût exact au gramme et les intégrer dans vos pizzas.</p>
+    <div id="base-recipes-list"></div>
+  </div>
+
+  <!-- ══ FRAIS FIXES ════════════════════════════════════════════ -->
+  <div id="tab-charges" class="tab-content">
+    <div class="stats-grid" id="charges-stats"></div>
+    <div class="card" style="margin-bottom:16px;">
+      <h2>Ajouter une charge mensuelle</h2>
+      <div class="form-grid">
+        <div class="form-group span2"><label>Nom de la charge</label><input id="charge-name" type="text" placeholder="ex: Loyer, Électricité…"></div>
+        <div class="form-group"><label>Montant mensuel (€)</label><input id="charge-amount" type="number" step="0.01" placeholder="800"></div>
+        <div class="form-group">
+          <label>Catégorie</label>
+          <select id="charge-cat">
+            <option>Loyer</option><option>Énergie</option><option>Eau</option>
+            <option>Communication</option><option>Assurances</option><option>Personnel</option>
+            <option>Marketing</option><option>Entretien</option><option>Comptabilité</option>
+            <option>Équipement</option><option>Autre</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:12px;" onclick="saveCharge()">+ Ajouter</button>
+    </div>
+    <div class="card">
+      <h2>Tableau des charges</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nom</th><th>Catégorie</th><th>Montant/mois</th><th>% du total</th><th>Par pizza</th><th></th></tr></thead>
+          <tbody id="charges-table"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <h2>💡 Astuce</h2>
+      <p style="font-size:13px;color:var(--muted);line-height:1.8;">
+        Coût matière + Frais fixes par pizza + Main d'œuvre = <strong style="color:var(--text)">Prix de revient complet</strong><br>
+        Renseignez le volume de pizzas vendues/mois dans l'onglet Paramètres pour que le calcul soit précis.
+      </p>
+    </div>
+  </div>
+
+  <!-- ══ PRODUITS DE REVENTE ════════════════════════════════════ -->
+  <div id="tab-resale" class="tab-content">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2 style="font-size:18px;">Produits de revente</h2>
+      <button class="btn btn-primary" onclick="openResaleModal()">+ Nouveau produit</button>
+    </div>
+    <div class="stats-grid" id="resale-stats"></div>
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Produit</th><th>Catégorie</th><th>Achat HT</th><th>Vente TTC</th><th>TVA</th><th>Vente HT</th><th>Marge HT</th><th>Marge %</th><th>Actions</th></tr></thead>
+          <tbody id="resale-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ FOURNISSEURS ═══════════════════════════════════════════ -->
+  <div id="tab-suppliers" class="tab-content">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2 style="font-size:18px;">Mes fournisseurs</h2>
+      <button class="btn btn-primary" onclick="openSupplierModal()">+ Nouveau fournisseur</button>
+    </div>
+    <div id="suppliers-list"></div>
+  </div>
+
+  <!-- ══ CALCUL PAR POIDS ═══════════════════════════════════════ -->
+  <div id="tab-prixkg" class="tab-content">
+    <div class="card" style="max-width:600px;">
+      <h2>⚖️ Calculateur de prix rapide</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Entrez le prix d'achat et la quantité pour obtenir le coût par unité, ou entrez un coût cible pour estimer le prix de vente.</p>
+      <div class="form-grid">
+        <div class="form-group"><label>Prix d'achat (€)</label><input id="pk-price" type="number" step="0.01" placeholder="4.50" oninput="calcPrixKg()"></div>
+        <div class="form-group"><label>Quantité achetée</label><input id="pk-qty" type="number" step="0.01" placeholder="1000" oninput="calcPrixKg()"></div>
+        <div class="form-group"><label>Unité</label><select id="pk-unit" onchange="calcPrixKg()">
+          <option value="g">g</option><option value="kg">kg</option><option value="ml">ml</option>
+          <option value="L">L</option><option value="pcs">pcs</option>
+        </select></div>
+        <div class="form-group"><label>Quantité utilisée</label><input id="pk-use" type="number" step="0.01" placeholder="150" oninput="calcPrixKg()"></div>
+      </div>
+      <div class="preview-bar" id="pk-result" style="margin-top:12px;">
+        <div class="pv"><span>Coût / unité</span><span id="pk-unit-cost">—</span></div>
+        <div class="pv"><span>Coût utilisé</span><span id="pk-use-cost">—</span></div>
+      </div>
+      <div class="sep"></div>
+      <h2>🎯 Prix de vente conseillé</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Calculez le prix de vente à partir d'un coût matière et d'un objectif de food cost.</p>
+      <div class="form-grid">
+        <div class="form-group"><label>Coût matière (€)</label><input id="fc-cost" type="number" step="0.01" placeholder="3.50" oninput="calcPrixVente()"></div>
+        <div class="form-group"><label>Objectif food cost (%)</label><input id="fc-target" type="number" step="0.5" placeholder="30" oninput="calcPrixVente()"></div>
+      </div>
+      <div class="preview-bar" id="fc-result" style="margin-top:12px;">
+        <div class="pv"><span>Prix conseillé</span><span id="fc-price">—</span></div>
+        <div class="pv"><span>Marge brute</span><span id="fc-margin2">—</span></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ ANALYSE IA ════════════════════════════════════════════ -->
   <div id="tab-ai" class="tab-content">
     <div class="card">
@@ -308,6 +419,10 @@
           <label>Nom de la pizzeria</label>
           <input id="set-name" type="text" placeholder="Pizz'en Seyne" value="Pizz'en Seyne">
         </div>
+        <div class="form-group">
+          <label>Pizzas vendues / mois</label>
+          <input id="set-monthly-pizzas" type="number" step="1" placeholder="ex: 800" value="0">
+        </div>
       </div>
       <div style="margin-top:14px;">
         <button class="btn btn-success" onclick="saveSettings()">💾 Enregistrer</button>
@@ -323,6 +438,90 @@
         <p style="margin-top:14px;">Le <strong style="color:var(--text)">taux de perte</strong> (gaspillage) est la quantité d'ingrédient non utilisée (chutes de fromage, légumes abîmés…). Intégrez-le pour un calcul réaliste.</p>
         <p style="margin-top:6px;">La <strong style="color:var(--text)">taille de pâton</strong> influe directement sur le coût. Pensez à définir les 3 tailles si vous proposez plusieurs formats.</p>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modal Recette de base ══════════════════════════════════ -->
+<div class="modal-overlay" id="baserecipe-modal">
+  <div class="modal">
+    <h2 id="br-modal-title">Nouvelle recette de base</h2>
+    <div id="br-alert"></div>
+    <div class="form-grid" style="margin-bottom:14px;">
+      <div class="form-group span2"><label>Nom</label><input id="br-name" type="text" placeholder="ex: Pâte napolitaine, Sauce tomate…"></div>
+      <div class="form-group"><label>Type</label>
+        <select id="br-type"><option>Pâte</option><option>Sauce</option><option>Garniture</option><option>Autre</option></select>
+      </div>
+      <div class="form-group"><label>Rendement final (g)</label><input id="br-yield" type="number" step="1" placeholder="ex: 1500"></div>
+      <div class="form-group span2"><label>Notes</label><textarea id="br-notes" placeholder="Recette, temps de repos…"></textarea></div>
+    </div>
+    <div class="sep"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <strong style="font-size:14px;">Ingrédients</strong>
+      <button class="btn btn-secondary btn-sm" onclick="addBRIngRow()">+ Ajouter</button>
+    </div>
+    <div id="br-ing-list"></div>
+    <div class="preview-bar" style="margin-top:12px;">
+      <div class="pv"><span>Coût total</span><span id="br-cost">—</span></div>
+      <div class="pv"><span>Coût / gramme</span><span id="br-cpg">—</span></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeBRModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveBaseRecipe()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modal Produit de revente ══════════════════════════════ -->
+<div class="modal-overlay" id="resale-modal">
+  <div class="modal">
+    <h2 id="resale-modal-title">Nouveau produit</h2>
+    <div id="resale-alert"></div>
+    <div class="form-grid">
+      <div class="form-group span2"><label>Nom du produit</label><input id="res-name" type="text" placeholder="ex: Coca-Cola 33cl"></div>
+      <div class="form-group"><label>Catégorie</label>
+        <select id="res-cat">
+          <option>Boissons soft</option><option>Boissons alcoolisées</option><option>Desserts</option>
+          <option>Snacks</option><option>Entrées</option><option>Autre</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Fournisseur</label><input id="res-supplier" type="text" placeholder="ex: Metro"></div>
+      <div class="form-group"><label>Prix achat HT (€)</label><input id="res-buy" type="number" step="0.01" placeholder="0.80" oninput="updateResalePreview()"></div>
+      <div class="form-group"><label>TVA (%)</label>
+        <select id="res-vat" onchange="updateResalePreview()">
+          <option value="5.5">5,5%</option><option value="10" selected>10% (restauration)</option><option value="20">20% (alcool)</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Prix vente TTC (€)</label><input id="res-price" type="number" step="0.01" placeholder="2.50" oninput="updateResalePreview()"></div>
+      <div class="form-group span2"><label>Notes</label><textarea id="res-notes" placeholder="Remarques…"></textarea></div>
+    </div>
+    <div class="preview-bar" style="margin-top:12px;">
+      <div class="pv"><span>Vente HT</span><span id="res-ht">—</span></div>
+      <div class="pv"><span>Marge HT</span><span id="res-margin">—</span></div>
+      <div class="pv"><span>Marge %</span><span id="res-mpct">—</span></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeResaleModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveResale()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modal Fournisseur ══════════════════════════════════════ -->
+<div class="modal-overlay" id="supplier-modal">
+  <div class="modal">
+    <h2 id="sup-modal-title">Nouveau fournisseur</h2>
+    <div id="sup-alert"></div>
+    <div class="form-grid">
+      <div class="form-group span2"><label>Nom du fournisseur</label><input id="sup-name" type="text" placeholder="ex: Metro, Transgourmet…"></div>
+      <div class="form-group"><label>Contact</label><input id="sup-contact" type="text" placeholder="Nom du représentant"></div>
+      <div class="form-group"><label>Téléphone</label><input id="sup-phone" type="tel" placeholder="06 00 00 00 00"></div>
+      <div class="form-group span2"><label>Email</label><input id="sup-email" type="email" placeholder="contact@fournisseur.fr"></div>
+      <div class="form-group span2"><label>Notes</label><textarea id="sup-notes" placeholder="Conditions, jours de livraison…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeSupplierModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveSupplier()">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -479,8 +678,9 @@ async function loadRecipes()     { const r = await fetch('/api/fc/recipes');    
 async function loadSettings()    { const r = await fetch('/api/fc/settings');    settings    = await r.json(); }
 
 function applySettings() {
-  if (settings.target_fc) document.getElementById('set-target-fc').value = settings.target_fc;
-  if (settings.name)      document.getElementById('set-name').value      = settings.name;
+  if (settings.target_fc)     document.getElementById('set-target-fc').value     = settings.target_fc;
+  if (settings.name)          document.getElementById('set-name').value          = settings.name;
+  if (settings.monthly_pizzas) document.getElementById('set-monthly-pizzas').value = settings.monthly_pizzas;
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────
@@ -957,6 +1157,395 @@ function formatMarkdown(text) {
 // ── Close modals on overlay click ────────────────────────────────
 document.getElementById('ing-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeIngModal(); });
 document.getElementById('recipe-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeRecipeModal(); });
+document.getElementById('baserecipe-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeBRModal(); });
+document.getElementById('resale-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeResaleModal(); });
+document.getElementById('supplier-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeSupplierModal(); });
+
+// ════════════════════════════════════════════════════════════════
+//  NOUVEAUX MODULES
+// ════════════════════════════════════════════════════════════════
+
+// ── Tab switch étendu ────────────────────────────────────────────
+const origSwitchTab = switchTab;
+switchTab = function(name) {
+  const names = ['dashboard','recipes','ingredients','baserecipes','charges','resale','suppliers','prixkg','rentabilite','ai','settings'];
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i] === name));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if (name === 'dashboard')   renderDashboard();
+  if (name === 'rentabilite') renderProfitTab();
+  if (name === 'baserecipes') renderBaseRecipes();
+  if (name === 'charges')     renderCharges();
+  if (name === 'resale')      renderResale();
+  if (name === 'suppliers')   renderSuppliers();
+};
+
+// ── State nouveaux modules ────────────────────────────────────────
+let baseRecipes = [], charges = [], resaleProducts = [], suppliers = [];
+let editingBRId = null, editingResaleId = null, editingSupplierId = null;
+
+async function loadAll() {
+  const [br, ch, rs, sp] = await Promise.all([
+    fetch('/api/fc/base-recipes').then(r=>r.json()),
+    fetch('/api/fc/charges').then(r=>r.json()),
+    fetch('/api/fc/resale').then(r=>r.json()),
+    fetch('/api/fc/suppliers').then(r=>r.json()),
+  ]);
+  baseRecipes = br; charges = ch; resaleProducts = rs; suppliers = sp;
+}
+
+// ── Recettes de base ──────────────────────────────────────────────
+function renderBaseRecipes() {
+  const el = document.getElementById('base-recipes-list');
+  if (!baseRecipes.length) {
+    el.innerHTML = '<div class="empty"><div class="icon">🥣</div><p>Aucune recette de base. Créez votre pâte, votre sauce tomate…</p></div>';
+    return;
+  }
+  el.innerHTML = baseRecipes.map(r => {
+    const ings = r.ingredients.map(i => `${i.quantity_g}g ${i.name}`).join(' · ');
+    return `<div class="recipe-card">
+      <div class="recipe-header">
+        <span class="recipe-name">${r.name}</span>
+        <span class="recipe-cat">${r.type}</span>
+      </div>
+      <div class="recipe-meta">
+        <div class="m">Rendement : <span>${r.yield_g} g</span></div>
+        <div class="m">Coût total : <span>${r.total_cost.toFixed(3)} €</span></div>
+        <div class="m">Coût / gramme : <span>${r.cost_per_g.toFixed(5)} €</span></div>
+        <div class="m">Coût / 100g : <span>${(r.cost_per_g * 100).toFixed(3)} €</span></div>
+      </div>
+      ${ings ? `<div class="recipe-ings">📋 ${ings}</div>` : ''}
+      ${r.notes ? `<div class="recipe-ings" style="margin-top:4px">💬 ${r.notes}</div>` : ''}
+      <div class="recipe-actions">
+        <button class="btn btn-secondary btn-sm" onclick="openBaseRecipeModal(${r.id})">✏️ Modifier</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteBaseRecipe(${r.id})">🗑 Supprimer</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openBaseRecipeModal(id=null) {
+  editingBRId = id;
+  document.getElementById('br-alert').innerHTML = '';
+  document.getElementById('br-ing-list').innerHTML = '';
+  if (id) {
+    const r = baseRecipes.find(x => x.id === id);
+    document.getElementById('br-modal-title').textContent = 'Modifier';
+    document.getElementById('br-name').value = r.name;
+    document.getElementById('br-type').value = r.type;
+    document.getElementById('br-yield').value = r.yield_g;
+    document.getElementById('br-notes').value = r.notes || '';
+    r.ingredients.forEach(i => addBRIngRow(i.ingredient_id, i.quantity_g));
+  } else {
+    document.getElementById('br-modal-title').textContent = 'Nouvelle recette de base';
+    ['br-name','br-yield','br-notes'].forEach(id => document.getElementById(id).value = '');
+    addBRIngRow();
+  }
+  updateBRPreview();
+  document.getElementById('baserecipe-modal').classList.add('open');
+}
+function closeBRModal() { document.getElementById('baserecipe-modal').classList.remove('open'); }
+
+function addBRIngRow(ingId=null, qty='') {
+  const list = document.getElementById('br-ing-list');
+  const row = document.createElement('div');
+  row.className = 'ing-row';
+  const opts = ingredients.map(i => `<option value="${i.id}" ${i.id===ingId?'selected':''}>${i.name} (${i.unit})</option>`).join('');
+  row.innerHTML = `<div class="ing-row-top">
+    <select onchange="updateBRPreview()">${opts}</select>
+    <input type="number" step="0.01" placeholder="Quantité (g)" value="${qty}" oninput="updateBRPreview()">
+    <span class="ing-cost-lbl" style="font-size:11px;color:var(--muted)"></span>
+    <button class="btn btn-danger btn-sm" onclick="this.closest('.ing-row').remove();updateBRPreview()">✕</button>
+  </div>`;
+  list.appendChild(row);
+}
+
+function updateBRPreview() {
+  const rows = document.querySelectorAll('#br-ing-list .ing-row');
+  let total = 0;
+  rows.forEach(row => {
+    const sel = row.querySelector('select');
+    const qtyEl = row.querySelector('input');
+    const lbl = row.querySelector('.ing-cost-lbl');
+    const ing = ingredients.find(i => i.id === parseInt(sel.value));
+    if (!ing || !qtyEl.value) { if(lbl) lbl.textContent=''; return; }
+    const uc = (ing.purchase_price / ing.purchase_quantity) * (1 + (ing.waste_pct||0)/100);
+    const cost = uc * parseFloat(qtyEl.value);
+    total += cost;
+    if (lbl) lbl.textContent = `= ${cost.toFixed(3)} €`;
+  });
+  const yld = parseFloat(document.getElementById('br-yield').value) || 0;
+  document.getElementById('br-cost').textContent = total.toFixed(3) + ' €';
+  document.getElementById('br-cpg').textContent = yld > 0 ? (total/yld).toFixed(5) + ' €/g' : '—';
+}
+
+async function saveBaseRecipe() {
+  const rows = document.querySelectorAll('#br-ing-list .ing-row');
+  const ings = [];
+  rows.forEach(row => {
+    const sel = row.querySelector('select');
+    const qty = parseFloat(row.querySelector('input').value);
+    if (!isNaN(qty) && qty > 0) ings.push({ ingredient_id: parseInt(sel.value), quantity_g: qty });
+  });
+  const data = {
+    name: document.getElementById('br-name').value.trim(),
+    type: document.getElementById('br-type').value,
+    yield_g: parseFloat(document.getElementById('br-yield').value),
+    notes: document.getElementById('br-notes').value.trim(),
+    ingredients: ings,
+  };
+  if (!data.name || isNaN(data.yield_g) || data.yield_g <= 0) {
+    document.getElementById('br-alert').innerHTML = '<div class="alert alert-error">Nom et rendement obligatoires.</div>';
+    return;
+  }
+  const url = editingBRId ? `/api/fc/base-recipes/${editingBRId}` : '/api/fc/base-recipes';
+  await fetch(url, {method:editingBRId?'PUT':'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+  closeBRModal();
+  await loadAll(); renderBaseRecipes();
+}
+
+async function deleteBaseRecipe(id) {
+  if (!confirm('Supprimer cette recette de base ?')) return;
+  await fetch(`/api/fc/base-recipes/${id}`, {method:'DELETE'});
+  await loadAll(); renderBaseRecipes();
+}
+
+// ── Frais fixes ───────────────────────────────────────────────────
+function renderCharges() {
+  const total = charges.reduce((s, c) => s + c.amount, 0);
+  const monthlyPizzas = parseInt(settings.monthly_pizzas || 0);
+  const perPizza = monthlyPizzas > 0 ? total / monthlyPizzas : 0;
+  document.getElementById('charges-stats').innerHTML = `
+    <div class="stat-card"><div class="val">${total.toFixed(2)} €</div><div class="lbl">Total charges/mois</div></div>
+    <div class="stat-card blue"><div class="val">${monthlyPizzas || '—'}</div><div class="lbl">Pizzas/mois (paramètres)</div></div>
+    <div class="stat-card warn"><div class="val">${perPizza > 0 ? perPizza.toFixed(2) + ' €' : '—'}</div><div class="lbl">Charges par pizza</div></div>
+    <div class="stat-card"><div class="val">${charges.length}</div><div class="lbl">Postes de charges</div></div>`;
+  const tbody = document.getElementById('charges-table');
+  if (!charges.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Aucune charge. Ajoutez loyer, électricité…</td></tr>'; return; }
+  tbody.innerHTML = charges.map(c => {
+    const pct = total > 0 ? (c.amount/total*100).toFixed(1) : 0;
+    const pp = monthlyPizzas > 0 ? (c.amount/monthlyPizzas).toFixed(2) + ' €' : '—';
+    return `<tr>
+      <td><strong>${c.name}</strong></td>
+      <td>${c.category}</td>
+      <td>${c.amount.toFixed(2)} €</td>
+      <td>${pct}%</td>
+      <td>${pp}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteCharge(${c.id})">🗑</button></td>
+    </tr>`;
+  }).join('') + `<tr style="background:rgba(255,255,255,.04);font-weight:700;">
+    <td colspan="2">TOTAL</td><td>${total.toFixed(2)} €</td><td>100%</td><td>${perPizza > 0 ? perPizza.toFixed(2) + ' €' : '—'}</td><td></td>
+  </tr>`;
+}
+
+async function saveCharge() {
+  const name = document.getElementById('charge-name').value.trim();
+  const amount = parseFloat(document.getElementById('charge-amount').value);
+  if (!name || isNaN(amount)) return;
+  await fetch('/api/fc/charges', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name, amount, category: document.getElementById('charge-cat').value})});
+  document.getElementById('charge-name').value = '';
+  document.getElementById('charge-amount').value = '';
+  await loadAll(); renderCharges();
+}
+
+async function deleteCharge(id) {
+  if (!confirm('Supprimer cette charge ?')) return;
+  await fetch(`/api/fc/charges/${id}`, {method:'DELETE'});
+  await loadAll(); renderCharges();
+}
+
+// ── Produits de revente ───────────────────────────────────────────
+function renderResale() {
+  const totalCA = resaleProducts.reduce((s,p) => s + (p.resale_price_ttc||0), 0);
+  const totalMargin = resaleProducts.reduce((s,p) => s + (p.margin_ht||0), 0);
+  document.getElementById('resale-stats').innerHTML = `
+    <div class="stat-card"><div class="val">${resaleProducts.length}</div><div class="lbl">Produits</div></div>
+    <div class="stat-card good"><div class="val">${(resaleProducts.reduce((s,p)=>s+p.margin_pct,0)/Math.max(resaleProducts.length,1)).toFixed(1)}%</div><div class="lbl">Marge moyenne</div></div>`;
+  const tbody = document.getElementById('resale-table');
+  if (!resaleProducts.length) { tbody.innerHTML = '<tr><td colspan="9"><div class="empty"><div class="icon">🏪</div><p>Aucun produit de revente.</p></div></td></tr>'; return; }
+  tbody.innerHTML = resaleProducts.map(p => `<tr>
+    <td><strong>${p.name}</strong></td>
+    <td>${p.category}</td>
+    <td>${p.buy_price_ht.toFixed(2)} €</td>
+    <td>${p.resale_price_ttc.toFixed(2)} €</td>
+    <td>${p.vat_rate}%</td>
+    <td>${p.resale_price_ht.toFixed(2)} €</td>
+    <td>${p.margin_ht.toFixed(2)} €</td>
+    <td><span class="fc-badge ${p.margin_pct >= 50 ? 'fc-good' : p.margin_pct >= 30 ? 'fc-ok' : 'fc-bad'}">${p.margin_pct.toFixed(1)}%</span></td>
+    <td>
+      <button class="btn btn-secondary btn-sm" onclick="openResaleModal(${p.id})">✏️</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteResale(${p.id})">🗑</button>
+    </td>
+  </tr>`).join('');
+}
+
+function openResaleModal(id=null) {
+  editingResaleId = id;
+  document.getElementById('resale-alert').innerHTML = '';
+  if (id) {
+    const p = resaleProducts.find(x => x.id === id);
+    document.getElementById('resale-modal-title').textContent = 'Modifier le produit';
+    document.getElementById('res-name').value = p.name;
+    document.getElementById('res-cat').value = p.category;
+    document.getElementById('res-supplier').value = p.supplier || '';
+    document.getElementById('res-buy').value = p.buy_price_ht;
+    document.getElementById('res-vat').value = p.vat_rate;
+    document.getElementById('res-price').value = p.resale_price_ttc;
+    document.getElementById('res-notes').value = p.notes || '';
+  } else {
+    document.getElementById('resale-modal-title').textContent = 'Nouveau produit';
+    ['res-name','res-supplier','res-buy','res-price','res-notes'].forEach(id => document.getElementById(id).value = '');
+  }
+  updateResalePreview();
+  document.getElementById('resale-modal').classList.add('open');
+}
+function closeResaleModal() { document.getElementById('resale-modal').classList.remove('open'); }
+
+function updateResalePreview() {
+  const buy = parseFloat(document.getElementById('res-buy').value) || 0;
+  const ttc = parseFloat(document.getElementById('res-price').value) || 0;
+  const vat = parseFloat(document.getElementById('res-vat').value) || 10;
+  const ht = ttc / (1 + vat / 100);
+  const margin = ht - buy;
+  const mpct = ht > 0 ? margin / ht * 100 : 0;
+  document.getElementById('res-ht').textContent = ht > 0 ? ht.toFixed(2) + ' €' : '—';
+  document.getElementById('res-margin').textContent = ht > 0 ? margin.toFixed(2) + ' €' : '—';
+  const mpctEl = document.getElementById('res-mpct');
+  mpctEl.textContent = ht > 0 ? mpct.toFixed(1) + ' %' : '—';
+  mpctEl.style.color = mpct >= 50 ? '#2ecc71' : mpct >= 30 ? '#f39c12' : '#e74c3c';
+}
+
+async function saveResale() {
+  const data = {
+    name: document.getElementById('res-name').value.trim(),
+    category: document.getElementById('res-cat').value,
+    buy_price_ht: parseFloat(document.getElementById('res-buy').value),
+    vat_rate: parseFloat(document.getElementById('res-vat').value),
+    resale_price_ttc: parseFloat(document.getElementById('res-price').value),
+    supplier: document.getElementById('res-supplier').value.trim(),
+    notes: document.getElementById('res-notes').value.trim(),
+  };
+  if (!data.name || isNaN(data.buy_price_ht) || isNaN(data.resale_price_ttc)) {
+    document.getElementById('resale-alert').innerHTML = '<div class="alert alert-error">Nom et prix obligatoires.</div>';
+    return;
+  }
+  const url = editingResaleId ? `/api/fc/resale/${editingResaleId}` : '/api/fc/resale';
+  await fetch(url, {method:editingResaleId?'PUT':'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+  closeResaleModal();
+  await loadAll(); renderResale();
+}
+
+async function deleteResale(id) {
+  if (!confirm('Supprimer ce produit ?')) return;
+  await fetch(`/api/fc/resale/${id}`, {method:'DELETE'});
+  await loadAll(); renderResale();
+}
+
+// ── Fournisseurs ──────────────────────────────────────────────────
+function renderSuppliers() {
+  const el = document.getElementById('suppliers-list');
+  if (!suppliers.length) { el.innerHTML = '<div class="empty"><div class="icon">📋</div><p>Aucun fournisseur. Ajoutez Metro, Transgourmet…</p></div>'; return; }
+  el.innerHTML = suppliers.map(s => `<div class="recipe-card">
+    <div class="recipe-header"><span class="recipe-name">${s.name}</span></div>
+    <div class="recipe-meta">
+      ${s.contact ? `<div class="m">👤 <span>${s.contact}</span></div>` : ''}
+      ${s.phone   ? `<div class="m">📞 <span>${s.phone}</span></div>` : ''}
+      ${s.email   ? `<div class="m">✉️ <span>${s.email}</span></div>` : ''}
+    </div>
+    ${s.notes ? `<div class="recipe-ings">💬 ${s.notes}</div>` : ''}
+    <div class="recipe-actions">
+      <button class="btn btn-secondary btn-sm" onclick="openSupplierModal(${s.id})">✏️ Modifier</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteSupplier(${s.id})">🗑 Supprimer</button>
+    </div>
+  </div>`).join('');
+}
+
+function openSupplierModal(id=null) {
+  editingSupplierId = id;
+  document.getElementById('sup-alert').innerHTML = '';
+  if (id) {
+    const s = suppliers.find(x => x.id === id);
+    document.getElementById('sup-modal-title').textContent = 'Modifier le fournisseur';
+    document.getElementById('sup-name').value = s.name;
+    document.getElementById('sup-contact').value = s.contact || '';
+    document.getElementById('sup-phone').value = s.phone || '';
+    document.getElementById('sup-email').value = s.email || '';
+    document.getElementById('sup-notes').value = s.notes || '';
+  } else {
+    document.getElementById('sup-modal-title').textContent = 'Nouveau fournisseur';
+    ['sup-name','sup-contact','sup-phone','sup-email','sup-notes'].forEach(id => document.getElementById(id).value = '');
+  }
+  document.getElementById('supplier-modal').classList.add('open');
+}
+function closeSupplierModal() { document.getElementById('supplier-modal').classList.remove('open'); }
+
+async function saveSupplier() {
+  const data = {
+    name: document.getElementById('sup-name').value.trim(),
+    contact: document.getElementById('sup-contact').value.trim(),
+    phone: document.getElementById('sup-phone').value.trim(),
+    email: document.getElementById('sup-email').value.trim(),
+    notes: document.getElementById('sup-notes').value.trim(),
+  };
+  if (!data.name) { document.getElementById('sup-alert').innerHTML = '<div class="alert alert-error">Nom obligatoire.</div>'; return; }
+  const url = editingSupplierId ? `/api/fc/suppliers/${editingSupplierId}` : '/api/fc/suppliers';
+  await fetch(url, {method:editingSupplierId?'PUT':'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+  closeSupplierModal();
+  await loadAll(); renderSuppliers();
+}
+
+async function deleteSupplier(id) {
+  if (!confirm('Supprimer ce fournisseur ?')) return;
+  await fetch(`/api/fc/suppliers/${id}`, {method:'DELETE'});
+  await loadAll(); renderSuppliers();
+}
+
+// ── Calcul par poids ──────────────────────────────────────────────
+function calcPrixKg() {
+  const price = parseFloat(document.getElementById('pk-price').value) || 0;
+  const qty   = parseFloat(document.getElementById('pk-qty').value) || 0;
+  const use   = parseFloat(document.getElementById('pk-use').value) || 0;
+  const unit  = document.getElementById('pk-unit').value;
+  const uc = qty > 0 ? price / qty : 0;
+  document.getElementById('pk-unit-cost').textContent = uc > 0 ? uc.toFixed(5) + ' €/' + unit : '—';
+  document.getElementById('pk-use-cost').textContent  = (uc > 0 && use > 0) ? (uc * use).toFixed(3) + ' €' : '—';
+}
+
+function calcPrixVente() {
+  const cost   = parseFloat(document.getElementById('fc-cost').value) || 0;
+  const target = parseFloat(document.getElementById('fc-target').value) || 0;
+  if (!cost || !target) { document.getElementById('fc-price').textContent = '—'; document.getElementById('fc-margin2').textContent = '—'; return; }
+  const price = (cost / target) * 100;
+  const margin = price - cost;
+  document.getElementById('fc-price').textContent  = price.toFixed(2) + ' €';
+  document.getElementById('fc-margin2').textContent = margin.toFixed(2) + ' €';
+}
+
+// ── Init étendu ───────────────────────────────────────────────────
+const origInit = init;
+init = async function() {
+  await Promise.all([loadIngredients(), loadRecipes(), loadSettings(), loadAll()]);
+  applySettings();
+  renderDashboard();
+  renderIngredients();
+  renderRecipes();
+  renderProfitTab();
+};
+
+// Paramètre mensuel pizzas pour frais fixes
+const origSaveSettings = saveSettings;
+saveSettings = async function() {
+  const data = {
+    target_fc: document.getElementById('set-target-fc').value,
+    name: document.getElementById('set-name').value,
+    monthly_pizzas: document.getElementById('set-monthly-pizzas')?.value || '0',
+  };
+  await fetch('/api/fc/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+  await loadSettings(); applySettings();
+  document.getElementById('settings-alert').innerHTML = '<div class="alert alert-success">✅ Paramètres enregistrés.</div>';
+  setTimeout(() => document.getElementById('settings-alert').innerHTML = '', 3000);
+  renderDashboard();
+};
 
 init();
 </script>

@@ -83,6 +83,49 @@ def init_db():
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
     )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS fc_base_recipes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        type TEXT DEFAULT 'Pâte',
+        yield_g REAL NOT NULL,
+        notes TEXT DEFAULT '',
+        created_at TEXT DEFAULT (datetime('now','localtime'))
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS fc_base_recipe_ingredients (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        base_recipe_id INTEGER NOT NULL,
+        ingredient_id INTEGER NOT NULL,
+        quantity_g REAL NOT NULL,
+        FOREIGN KEY (base_recipe_id) REFERENCES fc_base_recipes(id) ON DELETE CASCADE,
+        FOREIGN KEY (ingredient_id) REFERENCES fc_ingredients(id)
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS fc_charges (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        amount REAL NOT NULL,
+        category TEXT DEFAULT 'Autre',
+        created_at TEXT DEFAULT (datetime('now','localtime'))
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS fc_suppliers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        contact TEXT DEFAULT '',
+        phone TEXT DEFAULT '',
+        email TEXT DEFAULT '',
+        notes TEXT DEFAULT '',
+        created_at TEXT DEFAULT (datetime('now','localtime'))
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS fc_resale_products (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        category TEXT DEFAULT 'Boissons soft',
+        buy_price_ht REAL NOT NULL,
+        vat_rate REAL DEFAULT 10,
+        resale_price_ttc REAL NOT NULL,
+        supplier TEXT DEFAULT '',
+        notes TEXT DEFAULT '',
+        created_at TEXT DEFAULT (datetime('now','localtime'))
+    )''')
     # Migrations pour colonnes manquantes
     try:
         c.execute("ALTER TABLE fc_ingredients ADD COLUMN waste_pct REAL DEFAULT 0")
@@ -1053,6 +1096,194 @@ async def fc_stats():
         "target_fc": target_fc,
         "alerts": [{"name": r["name"], "fc": r["food_cost_pct"]} for r in alerts],
     }
+
+
+# ── Recettes de base (sous-recettes : pâte, sauce…) ─────────────
+
+@app.get("/api/fc/base-recipes")
+async def list_base_recipes():
+    db = get_db()
+    rows = db.execute("SELECT * FROM fc_base_recipes ORDER BY type, name").fetchall()
+    result = []
+    for r in rows:
+        rec = dict(r)
+        items = db.execute(
+            """SELECT bri.quantity_g, i.id as ingredient_id, i.name, i.unit, i.purchase_price, i.purchase_quantity, i.waste_pct
+               FROM fc_base_recipe_ingredients bri
+               JOIN fc_ingredients i ON i.id = bri.ingredient_id
+               WHERE bri.base_recipe_id=?""", (rec["id"],)
+        ).fetchall()
+        items_list = [dict(it) for it in items]
+        total_cost = sum(
+            (it["purchase_price"] / it["purchase_quantity"]) * (1 + (it.get("waste_pct") or 0) / 100) * it["quantity_g"]
+            for it in items_list
+        )
+        rec["ingredients"] = items_list
+        rec["total_cost"] = round(total_cost, 4)
+        rec["cost_per_g"] = round(total_cost / rec["yield_g"], 6) if rec["yield_g"] > 0 else 0
+        result.append(rec)
+    db.close()
+    return result
+
+@app.post("/api/fc/base-recipes")
+async def create_base_recipe(data: dict):
+    db = get_db()
+    cur = db.execute(
+        "INSERT INTO fc_base_recipes (name, type, yield_g, notes) VALUES (?,?,?,?)",
+        (data["name"], data.get("type", "Pâte"), data["yield_g"], data.get("notes", ""))
+    )
+    rid = cur.lastrowid
+    for ing in data.get("ingredients", []):
+        db.execute("INSERT INTO fc_base_recipe_ingredients (base_recipe_id, ingredient_id, quantity_g) VALUES (?,?,?)",
+                   (rid, ing["ingredient_id"], ing["quantity_g"]))
+    db.commit()
+    db.close()
+    rows = await list_base_recipes()
+    return next(r for r in rows if r["id"] == rid)
+
+@app.put("/api/fc/base-recipes/{rid}")
+async def update_base_recipe(rid: int, data: dict):
+    db = get_db()
+    db.execute("UPDATE fc_base_recipes SET name=?, type=?, yield_g=?, notes=? WHERE id=?",
+               (data["name"], data.get("type", "Pâte"), data["yield_g"], data.get("notes", ""), rid))
+    db.execute("DELETE FROM fc_base_recipe_ingredients WHERE base_recipe_id=?", (rid,))
+    for ing in data.get("ingredients", []):
+        db.execute("INSERT INTO fc_base_recipe_ingredients (base_recipe_id, ingredient_id, quantity_g) VALUES (?,?,?)",
+                   (rid, ing["ingredient_id"], ing["quantity_g"]))
+    db.commit()
+    db.close()
+    rows = await list_base_recipes()
+    return next((r for r in rows if r["id"] == rid), None)
+
+@app.delete("/api/fc/base-recipes/{rid}")
+async def delete_base_recipe(rid: int):
+    db = get_db()
+    db.execute("DELETE FROM fc_base_recipe_ingredients WHERE base_recipe_id=?", (rid,))
+    db.execute("DELETE FROM fc_base_recipes WHERE id=?", (rid,))
+    db.commit()
+    db.close()
+    return {"ok": True}
+
+
+# ── Frais fixes mensuels ──────────────────────────────────────────
+
+@app.get("/api/fc/charges")
+async def list_charges():
+    db = get_db()
+    rows = db.execute("SELECT * FROM fc_charges ORDER BY category, name").fetchall()
+    db.close()
+    return [dict(r) for r in rows]
+
+@app.post("/api/fc/charges")
+async def create_charge(data: dict):
+    db = get_db()
+    cur = db.execute("INSERT INTO fc_charges (name, amount, category) VALUES (?,?,?)",
+                     (data["name"], data["amount"], data.get("category", "Autre")))
+    db.commit()
+    row = db.execute("SELECT * FROM fc_charges WHERE id=?", (cur.lastrowid,)).fetchone()
+    db.close()
+    return dict(row)
+
+@app.delete("/api/fc/charges/{charge_id}")
+async def delete_charge(charge_id: int):
+    db = get_db()
+    db.execute("DELETE FROM fc_charges WHERE id=?", (charge_id,))
+    db.commit()
+    db.close()
+    return {"ok": True}
+
+
+# ── Fournisseurs ──────────────────────────────────────────────────
+
+@app.get("/api/fc/suppliers")
+async def list_suppliers():
+    db = get_db()
+    rows = db.execute("SELECT * FROM fc_suppliers ORDER BY name").fetchall()
+    db.close()
+    return [dict(r) for r in rows]
+
+@app.post("/api/fc/suppliers")
+async def create_supplier(data: dict):
+    db = get_db()
+    cur = db.execute("INSERT INTO fc_suppliers (name, contact, phone, email, notes) VALUES (?,?,?,?,?)",
+                     (data["name"], data.get("contact",""), data.get("phone",""), data.get("email",""), data.get("notes","")))
+    db.commit()
+    row = db.execute("SELECT * FROM fc_suppliers WHERE id=?", (cur.lastrowid,)).fetchone()
+    db.close()
+    return dict(row)
+
+@app.put("/api/fc/suppliers/{sup_id}")
+async def update_supplier(sup_id: int, data: dict):
+    db = get_db()
+    db.execute("UPDATE fc_suppliers SET name=?, contact=?, phone=?, email=?, notes=? WHERE id=?",
+               (data["name"], data.get("contact",""), data.get("phone",""), data.get("email",""), data.get("notes",""), sup_id))
+    db.commit()
+    row = db.execute("SELECT * FROM fc_suppliers WHERE id=?", (sup_id,)).fetchone()
+    db.close()
+    return dict(row)
+
+@app.delete("/api/fc/suppliers/{sup_id}")
+async def delete_supplier(sup_id: int):
+    db = get_db()
+    db.execute("DELETE FROM fc_suppliers WHERE id=?", (sup_id,))
+    db.commit()
+    db.close()
+    return {"ok": True}
+
+
+# ── Produits de revente ───────────────────────────────────────────
+
+@app.get("/api/fc/resale")
+async def list_resale():
+    db = get_db()
+    rows = db.execute("SELECT * FROM fc_resale_products ORDER BY category, name").fetchall()
+    db.close()
+    result = []
+    for r in rows:
+        d = dict(r)
+        buy_ht = d["buy_price_ht"]
+        resale_ttc = d["resale_price_ttc"]
+        vat = d["vat_rate"]
+        resale_ht = resale_ttc / (1 + vat / 100)
+        d["resale_price_ht"] = round(resale_ht, 4)
+        d["margin_ht"] = round(resale_ht - buy_ht, 4)
+        d["margin_pct"] = round((resale_ht - buy_ht) / resale_ht * 100, 2) if resale_ht > 0 else 0
+        result.append(d)
+    return result
+
+@app.post("/api/fc/resale")
+async def create_resale(data: dict):
+    db = get_db()
+    cur = db.execute(
+        "INSERT INTO fc_resale_products (name, category, buy_price_ht, vat_rate, resale_price_ttc, supplier, notes) VALUES (?,?,?,?,?,?,?)",
+        (data["name"], data.get("category","Boissons soft"), data["buy_price_ht"],
+         data.get("vat_rate", 10), data["resale_price_ttc"], data.get("supplier",""), data.get("notes",""))
+    )
+    db.commit()
+    row = db.execute("SELECT * FROM fc_resale_products WHERE id=?", (cur.lastrowid,)).fetchone()
+    db.close()
+    return dict(row)
+
+@app.put("/api/fc/resale/{prod_id}")
+async def update_resale(prod_id: int, data: dict):
+    db = get_db()
+    db.execute(
+        "UPDATE fc_resale_products SET name=?, category=?, buy_price_ht=?, vat_rate=?, resale_price_ttc=?, supplier=?, notes=? WHERE id=?",
+        (data["name"], data.get("category","Boissons soft"), data["buy_price_ht"],
+         data.get("vat_rate", 10), data["resale_price_ttc"], data.get("supplier",""), data.get("notes",""), prod_id)
+    )
+    db.commit()
+    row = db.execute("SELECT * FROM fc_resale_products WHERE id=?", (prod_id,)).fetchone()
+    db.close()
+    return dict(row)
+
+@app.delete("/api/fc/resale/{prod_id}")
+async def delete_resale(prod_id: int):
+    db = get_db()
+    db.execute("DELETE FROM fc_resale_products WHERE id=?", (prod_id,))
+    db.commit()
+    db.close()
+    return {"ok": True}
 
 
 # ── Analyse IA ────────────────────────────────────────────────────
