@@ -1295,11 +1295,11 @@ async def fc_ai_analysis():
     db.close()
     cfg = {r["key"]: r["value"] for r in settings_rows}
 
-    provider   = cfg.get("ai_provider", "claude")
-    api_claude = cfg.get("api_claude", "") or os.getenv("ANTHROPIC_API_KEY", "")
     api_openai = cfg.get("api_openai", "") or os.getenv("OPENAI_API_KEY", "")
-    api_gemini = cfg.get("api_gemini", "") or os.getenv("GEMINI_API_KEY", "")
     pizzeria   = cfg.get("name", "Pizz'en Seyne")
+
+    if not api_openai:
+        raise HTTPException(400, "Clé API OpenAI manquante — ajoutez-la dans Paramètres")
 
     recipes = await list_recipes()
     if not recipes:
@@ -1321,39 +1321,12 @@ Analyse ces données et donne :
 
 Réponds en français, de manière concise et pratique. Format Markdown."""
 
-    if provider == "claude":
-        if not api_claude:
-            raise HTTPException(400, "Clé API Claude manquante — ajoutez-la dans Paramètres")
-        client = anthropic.Anthropic(api_key=api_claude)
-        msg = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=1000,
-            messages=[{"role": "user", "content": prompt}]
+    async with httpx.AsyncClient(timeout=60) as client:
+        r = await client.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_openai}", "Content-Type": "application/json"},
+            json={"model": "gpt-4o-mini", "max_tokens": 1000,
+                  "messages": [{"role": "user", "content": prompt}]}
         )
-        return {"analysis": msg.content[0].text}
-
-    elif provider == "openai":
-        if not api_openai:
-            raise HTTPException(400, "Clé API OpenAI manquante — ajoutez-la dans Paramètres")
-        async with httpx.AsyncClient(timeout=60) as client:
-            r = await client.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {api_openai}", "Content-Type": "application/json"},
-                json={"model": "gpt-4o-mini", "max_tokens": 1000,
-                      "messages": [{"role": "user", "content": prompt}]}
-            )
-            r.raise_for_status()
-            return {"analysis": r.json()["choices"][0]["message"]["content"]}
-
-    elif provider == "gemini":
-        if not api_gemini:
-            raise HTTPException(400, "Clé API Gemini manquante — ajoutez-la dans Paramètres")
-        async with httpx.AsyncClient(timeout=60) as client:
-            r = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_gemini}",
-                json={"contents": [{"parts": [{"text": prompt}]}]}
-            )
-            r.raise_for_status()
-            return {"analysis": r.json()["candidates"][0]["content"]["parts"][0]["text"]}
-
-    raise HTTPException(400, "Provider IA inconnu")
+        r.raise_for_status()
+        return {"analysis": r.json()["choices"][0]["message"]["content"]}
