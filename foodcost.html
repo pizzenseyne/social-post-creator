@@ -426,37 +426,15 @@
     </div>
 
     <div class="card settings-section">
-      <h2>🤖 Clés API Intelligence Artificielle</h2>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Entrez votre clé API pour activer l'analyse IA. Seule la clé active sera utilisée — les autres sont ignorées. Les clés sont stockées localement sur votre serveur.</p>
-      <div class="form-grid" style="max-width:700px;">
-        <div class="form-group span2" style="position:relative;">
-          <label>🟣 Claude (Anthropic) — <a href="https://console.anthropic.com" target="_blank" style="color:var(--blue-l);font-size:11px;">console.anthropic.com</a></label>
-          <div style="display:flex;gap:8px;">
-            <input id="set-api-claude" type="password" placeholder="sk-ant-api03-…" style="flex:1;">
-            <button class="btn btn-secondary btn-sm" onclick="toggleKey('set-api-claude')">👁</button>
-          </div>
-        </div>
+      <h2>🤖 Clé API OpenAI (ChatGPT)</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Entrez votre clé API OpenAI pour activer l'analyse IA. Obtenez votre clé sur <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--blue-l);">platform.openai.com</a>. La clé est stockée localement sur votre serveur.</p>
+      <div class="form-grid" style="max-width:500px;">
         <div class="form-group span2">
-          <label>🟢 ChatGPT (OpenAI) — <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--blue-l);font-size:11px;">platform.openai.com</a></label>
+          <label>Clé API OpenAI</label>
           <div style="display:flex;gap:8px;">
             <input id="set-api-openai" type="password" placeholder="sk-proj-…" style="flex:1;">
             <button class="btn btn-secondary btn-sm" onclick="toggleKey('set-api-openai')">👁</button>
           </div>
-        </div>
-        <div class="form-group span2">
-          <label>🔵 Gemini (Google) — <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--blue-l);font-size:11px;">aistudio.google.com</a></label>
-          <div style="display:flex;gap:8px;">
-            <input id="set-api-gemini" type="password" placeholder="AIzaSy…" style="flex:1;">
-            <button class="btn btn-secondary btn-sm" onclick="toggleKey('set-api-gemini')">👁</button>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>IA active</label>
-          <select id="set-ai-provider">
-            <option value="claude">Claude (Anthropic)</option>
-            <option value="openai">ChatGPT (OpenAI)</option>
-            <option value="gemini">Gemini (Google)</option>
-          </select>
         </div>
       </div>
       <div style="margin-top:16px;">
@@ -716,10 +694,7 @@ function applySettings() {
   if (settings.target_fc)      document.getElementById('set-target-fc').value      = settings.target_fc;
   if (settings.name)           document.getElementById('set-name').value           = settings.name;
   if (settings.monthly_pizzas) document.getElementById('set-monthly-pizzas').value = settings.monthly_pizzas;
-  if (settings.api_claude)     document.getElementById('set-api-claude').value     = settings.api_claude;
   if (settings.api_openai)     document.getElementById('set-api-openai').value     = settings.api_openai;
-  if (settings.api_gemini)     document.getElementById('set-api-gemini').value     = settings.api_gemini;
-  if (settings.ai_provider)    document.getElementById('set-ai-provider').value    = settings.ai_provider;
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────
@@ -1584,10 +1559,7 @@ saveSettings = async function() {
     target_fc: document.getElementById('set-target-fc').value,
     name: document.getElementById('set-name').value,
     monthly_pizzas: document.getElementById('set-monthly-pizzas')?.value || '0',
-    api_claude:  document.getElementById('set-api-claude')?.value  || '',
     api_openai:  document.getElementById('set-api-openai')?.value  || '',
-    api_gemini:  document.getElementById('set-api-gemini')?.value  || '',
-    ai_provider: document.getElementById('set-ai-provider')?.value || 'claude',
   };
   await fetch('/api/fc/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
   await loadSettings(); applySettings();
