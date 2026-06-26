@@ -44,6 +44,32 @@ def init_db():
         platform TEXT PRIMARY KEY,
         config TEXT NOT NULL
     )''')
+    # ── Food Cost tables ──────────────────────────────────────────
+    c.execute('''CREATE TABLE IF NOT EXISTS fc_ingredients (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        unit TEXT NOT NULL,
+        purchase_price REAL NOT NULL,
+        purchase_quantity REAL NOT NULL,
+        category TEXT DEFAULT 'Autre',
+        created_at TEXT DEFAULT (datetime('now','localtime'))
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS fc_recipes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        category TEXT DEFAULT 'Pizza',
+        selling_price REAL NOT NULL,
+        notes TEXT DEFAULT '',
+        created_at TEXT DEFAULT (datetime('now','localtime'))
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS fc_recipe_ingredients (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        recipe_id INTEGER NOT NULL,
+        ingredient_id INTEGER NOT NULL,
+        quantity REAL NOT NULL,
+        FOREIGN KEY (recipe_id) REFERENCES fc_recipes(id) ON DELETE CASCADE,
+        FOREIGN KEY (ingredient_id) REFERENCES fc_ingredients(id)
+    )''')
     conn.commit()
     conn.close()
 
@@ -742,3 +768,152 @@ async def serve_icon(size: int):
 @app.get("/")
 async def serve_frontend():
     return FileResponse(str(BASE_DIR / "index.html"))
+
+@app.get("/foodcost")
+async def serve_foodcost():
+    return FileResponse(str(BASE_DIR / "foodcost.html"))
+
+
+# ══════════════════════════════════════════════════════════════════
+#  FOOD COST API
+# ══════════════════════════════════════════════════════════════════
+
+# ── Ingrédients ──────────────────────────────────────────────────
+
+@app.get("/api/fc/ingredients")
+async def list_ingredients():
+    db = get_db()
+    rows = db.execute("SELECT * FROM fc_ingredients ORDER BY category, name").fetchall()
+    db.close()
+    return [dict(r) for r in rows]
+
+@app.post("/api/fc/ingredients")
+async def create_ingredient(data: dict):
+    db = get_db()
+    cur = db.execute(
+        "INSERT INTO fc_ingredients (name, unit, purchase_price, purchase_quantity, category) VALUES (?,?,?,?,?)",
+        (data["name"], data["unit"], data["purchase_price"], data["purchase_quantity"], data.get("category", "Autre"))
+    )
+    db.commit()
+    row = db.execute("SELECT * FROM fc_ingredients WHERE id=?", (cur.lastrowid,)).fetchone()
+    db.close()
+    return dict(row)
+
+@app.put("/api/fc/ingredients/{ing_id}")
+async def update_ingredient(ing_id: int, data: dict):
+    db = get_db()
+    db.execute(
+        "UPDATE fc_ingredients SET name=?, unit=?, purchase_price=?, purchase_quantity=?, category=? WHERE id=?",
+        (data["name"], data["unit"], data["purchase_price"], data["purchase_quantity"], data.get("category", "Autre"), ing_id)
+    )
+    db.commit()
+    row = db.execute("SELECT * FROM fc_ingredients WHERE id=?", (ing_id,)).fetchone()
+    db.close()
+    if not row:
+        raise HTTPException(404)
+    return dict(row)
+
+@app.delete("/api/fc/ingredients/{ing_id}")
+async def delete_ingredient(ing_id: int):
+    db = get_db()
+    db.execute("DELETE FROM fc_ingredients WHERE id=?", (ing_id,))
+    db.commit()
+    db.close()
+    return {"ok": True}
+
+
+# ── Recettes ─────────────────────────────────────────────────────
+
+@app.get("/api/fc/recipes")
+async def list_recipes():
+    db = get_db()
+    recipes = db.execute("SELECT * FROM fc_recipes ORDER BY category, name").fetchall()
+    result = []
+    for r in recipes:
+        rec = dict(r)
+        items = db.execute(
+            """SELECT ri.id, ri.quantity, i.id as ingredient_id, i.name, i.unit, i.purchase_price, i.purchase_quantity
+               FROM fc_recipe_ingredients ri
+               JOIN fc_ingredients i ON i.id = ri.ingredient_id
+               WHERE ri.recipe_id=?""", (rec["id"],)
+        ).fetchall()
+        ingredient_cost = sum(
+            (it["purchase_price"] / it["purchase_quantity"]) * it["quantity"]
+            for it in items
+        )
+        rec["ingredients"] = [dict(it) for it in items]
+        rec["ingredient_cost"] = round(ingredient_cost, 4)
+        rec["food_cost_pct"] = round((ingredient_cost / rec["selling_price"] * 100), 2) if rec["selling_price"] > 0 else 0
+        rec["margin"] = round(rec["selling_price"] - ingredient_cost, 4)
+        result.append(rec)
+    db.close()
+    return result
+
+@app.post("/api/fc/recipes")
+async def create_recipe(data: dict):
+    db = get_db()
+    cur = db.execute(
+        "INSERT INTO fc_recipes (name, category, selling_price, notes) VALUES (?,?,?,?)",
+        (data["name"], data.get("category", "Pizza"), data["selling_price"], data.get("notes", ""))
+    )
+    recipe_id = cur.lastrowid
+    for ing in data.get("ingredients", []):
+        db.execute(
+            "INSERT INTO fc_recipe_ingredients (recipe_id, ingredient_id, quantity) VALUES (?,?,?)",
+            (recipe_id, ing["ingredient_id"], ing["quantity"])
+        )
+    db.commit()
+    db.close()
+    recipes = await list_recipes()
+    return next(r for r in recipes if r["id"] == recipe_id)
+
+@app.put("/api/fc/recipes/{recipe_id}")
+async def update_recipe(recipe_id: int, data: dict):
+    db = get_db()
+    db.execute(
+        "UPDATE fc_recipes SET name=?, category=?, selling_price=?, notes=? WHERE id=?",
+        (data["name"], data.get("category", "Pizza"), data["selling_price"], data.get("notes", ""), recipe_id)
+    )
+    db.execute("DELETE FROM fc_recipe_ingredients WHERE recipe_id=?", (recipe_id,))
+    for ing in data.get("ingredients", []):
+        db.execute(
+            "INSERT INTO fc_recipe_ingredients (recipe_id, ingredient_id, quantity) VALUES (?,?,?)",
+            (recipe_id, ing["ingredient_id"], ing["quantity"])
+        )
+    db.commit()
+    db.close()
+    recipes = await list_recipes()
+    match = next((r for r in recipes if r["id"] == recipe_id), None)
+    if not match:
+        raise HTTPException(404)
+    return match
+
+@app.delete("/api/fc/recipes/{recipe_id}")
+async def delete_recipe(recipe_id: int):
+    db = get_db()
+    db.execute("DELETE FROM fc_recipe_ingredients WHERE recipe_id=?", (recipe_id,))
+    db.execute("DELETE FROM fc_recipes WHERE id=?", (recipe_id,))
+    db.commit()
+    db.close()
+    return {"ok": True}
+
+
+# ── Dashboard stats ───────────────────────────────────────────────
+
+@app.get("/api/fc/stats")
+async def fc_stats():
+    db = get_db()
+    recipes = await list_recipes()
+    total = len(recipes)
+    avg_fc = round(sum(r["food_cost_pct"] for r in recipes) / total, 2) if total else 0
+    best = min(recipes, key=lambda r: r["food_cost_pct"]) if recipes else None
+    worst = max(recipes, key=lambda r: r["food_cost_pct"]) if recipes else None
+    ing_count = db.execute("SELECT COUNT(*) FROM fc_ingredients").fetchone()[0]
+    db.close()
+    return {
+        "total_recipes": total,
+        "avg_food_cost_pct": avg_fc,
+        "ingredient_count": ing_count,
+        "best_recipe": best,
+        "worst_recipe": worst,
+    }
