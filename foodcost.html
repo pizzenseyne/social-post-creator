@@ -4,165 +4,196 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Food Cost — Pizz'en Seyne</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     :root {
-      --red: #c0392b;
-      --red-light: #e74c3c;
-      --green: #27ae60;
-      --orange: #e67e22;
-      --bg: #1a1a2e;
-      --card: #16213e;
-      --card2: #0f3460;
-      --border: #2d3561;
-      --text: #e0e0e0;
-      --muted: #8892b0;
-      --radius: 12px;
+      --red:#c0392b; --red-l:#e74c3c; --green:#27ae60; --green-l:#2ecc71;
+      --orange:#e67e22; --orange-l:#f39c12; --blue:#2980b9; --blue-l:#3498db;
+      --bg:#1a1a2e; --card:#16213e; --card2:#0f3460; --border:#2d3561;
+      --text:#e0e0e0; --muted:#8892b0; --radius:12px;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
 
-    /* ── Header ── */
-    header {
-      background: linear-gradient(135deg, #c0392b 0%, #922b21 100%);
-      padding: 16px 24px;
-      display: flex; align-items: center; gap: 16px;
-      box-shadow: 0 4px 20px rgba(0,0,0,.4);
+    /* Header */
+    header{background:linear-gradient(135deg,#c0392b,#922b21);padding:16px 24px;display:flex;align-items:center;gap:16px;box-shadow:0 4px 20px rgba(0,0,0,.4);}
+    header .logo{font-size:28px;}
+    header h1{font-size:22px;font-weight:700;}
+    header p{font-size:13px;opacity:.8;}
+    header nav{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;}
+    header nav button{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;transition:.2s;}
+    header nav button:hover{background:rgba(255,255,255,.3);}
+
+    /* Layout */
+    .container{max-width:1280px;margin:0 auto;padding:24px 16px;}
+
+    /* Tabs */
+    .tabs{display:flex;gap:4px;margin-bottom:24px;border-bottom:2px solid var(--border);overflow-x:auto;}
+    .tab{padding:10px 18px;border-radius:8px 8px 0 0;cursor:pointer;font-size:14px;font-weight:600;
+         border:2px solid transparent;border-bottom:none;margin-bottom:-2px;color:var(--muted);white-space:nowrap;transition:.2s;}
+    .tab.active{background:var(--card);border-color:var(--border);color:var(--text);}
+    .tab:hover:not(.active){color:var(--text);}
+    .tab-content{display:none;}
+    .tab-content.active{display:block;}
+
+    /* Cards */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;}
+    .card h2{font-size:16px;margin-bottom:16px;color:#fff;}
+
+    /* Stats grid */
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;}
+    .stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;}
+    .stat-card .val{font-size:28px;font-weight:800;margin-bottom:4px;}
+    .stat-card .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+    .stat-card.good .val{color:var(--green-l);}
+    .stat-card.warn .val{color:var(--orange-l);}
+    .stat-card.bad  .val{color:var(--red-l);}
+    .stat-card.blue .val{color:var(--blue-l);}
+
+    /* Alert banner */
+    .alert-banner{background:rgba(231,76,60,.12);border:1px solid rgba(231,76,60,.4);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;display:none;}
+    .alert-banner.show{display:block;}
+    .alert-banner strong{color:var(--red-l);}
+
+    /* Forms */
+    .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
+    .form-group{display:flex;flex-direction:column;gap:6px;}
+    .form-group label{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;}
+    .form-group input,.form-group select,.form-group textarea{
+      background:var(--bg);border:1px solid var(--border);color:var(--text);
+      border-radius:8px;padding:9px 12px;font-size:14px;outline:none;transition:.2s;font-family:inherit;}
+    .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--red-l);}
+    .form-group textarea{resize:vertical;min-height:56px;}
+    .span2{grid-column:span 2;}
+    .span3{grid-column:span 3;}
+
+    /* Buttons */
+    .btn{padding:9px 18px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:.2s;display:inline-flex;align-items:center;gap:6px;}
+    .btn-primary{background:var(--red);color:#fff;}
+    .btn-primary:hover{background:var(--red-l);}
+    .btn-success{background:var(--green);color:#fff;}
+    .btn-success:hover{background:var(--green-l);}
+    .btn-secondary{background:var(--card2);color:var(--text);border:1px solid var(--border);}
+    .btn-secondary:hover{background:var(--border);}
+    .btn-danger{background:transparent;color:var(--red-l);border:1px solid var(--red-l);}
+    .btn-danger:hover{background:var(--red-l);color:#fff;}
+    .btn-ai{background:linear-gradient(135deg,#6c3483,#2980b9);color:#fff;}
+    .btn-ai:hover{opacity:.9;}
+    .btn-sm{padding:5px 11px;font-size:12px;}
+
+    /* Table */
+    .table-wrap{overflow-x:auto;}
+    table{width:100%;border-collapse:collapse;font-size:13px;}
+    th{text-align:left;padding:9px 12px;font-size:11px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);}
+    td{padding:11px 12px;border-bottom:1px solid rgba(45,53,97,.5);vertical-align:middle;}
+    tr:hover td{background:rgba(255,255,255,.03);}
+
+    /* FC badge */
+    .fc-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-weight:700;font-size:12px;}
+    .fc-good{background:rgba(39,174,96,.2);color:#2ecc71;}
+    .fc-ok  {background:rgba(230,126,34,.2);color:#f39c12;}
+    .fc-bad {background:rgba(231,76,60,.2); color:#e74c3c;}
+
+    /* Recipe cards */
+    .recipe-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;}
+    .recipe-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px;}
+    .recipe-name{font-size:17px;font-weight:700;}
+    .recipe-cat{font-size:11px;color:var(--muted);background:var(--bg);padding:2px 8px;border-radius:10px;white-space:nowrap;}
+    .recipe-sizes{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:10px;}
+    .size-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;}
+    .size-box .size-lbl{font-size:11px;color:var(--muted);margin-bottom:4px;}
+    .size-box .size-val{font-size:15px;font-weight:700;}
+    .recipe-meta{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;margin-bottom:8px;}
+    .recipe-meta .m span{font-weight:700;}
+    .recipe-ings{font-size:12px;color:var(--muted);line-height:1.7;}
+    .recipe-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+
+    /* Ingredient row in recipe form */
+    #ing-list{display:flex;flex-direction:column;gap:8px;margin-top:8px;}
+    .ing-row{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+    .ing-row-top{display:grid;grid-template-columns:1fr 90px 80px auto;gap:8px;align-items:center;}
+    .ing-row-sizes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px;}
+    .ing-row select,.ing-row input{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:13px;width:100%;}
+    .ing-cost-lbl{font-size:11px;color:var(--muted);}
+
+    /* Preview bar */
+    .preview-bar{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:flex;flex-wrap:wrap;gap:16px;font-size:13px;margin-top:12px;}
+    .preview-bar .pv{display:flex;flex-direction:column;gap:2px;}
+    .preview-bar .pv span:first-child{font-size:10px;color:var(--muted);text-transform:uppercase;}
+    .preview-bar .pv span:last-child{font-weight:700;font-size:15px;}
+
+    /* Sizes toggle */
+    .sizes-toggle{display:flex;gap:8px;margin-bottom:12px;}
+    .sz-btn{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:12px;font-weight:600;transition:.2s;}
+    .sz-btn.active{background:var(--red);color:#fff;border-color:var(--red);}
+
+    /* Modal */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;padding:16px;}
+    .modal-overlay.open{display:flex;}
+    .modal{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;}
+    .modal h2{margin-bottom:20px;font-size:18px;}
+    .modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;}
+
+    /* Separator */
+    .sep{height:1px;background:var(--border);margin:16px 0;}
+
+    /* Search */
+    .search-bar{padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;width:100%;margin-bottom:16px;outline:none;}
+    .search-bar:focus{border-color:var(--red-l);}
+
+    /* AI panel */
+    .ai-result{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;font-size:14px;line-height:1.8;white-space:pre-wrap;margin-top:12px;display:none;}
+    .ai-result.show{display:block;}
+    .ai-result h1,.ai-result h2,.ai-result h3{color:#fff;margin-bottom:8px;margin-top:12px;font-size:15px;}
+    .ai-result strong{color:var(--orange-l);}
+    .ai-result ul{padding-left:20px;}
+
+    /* Chart */
+    .charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:20px;}
+    .chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;}
+    .chart-card h3{font-size:14px;margin-bottom:14px;color:var(--muted);}
+
+    /* Price history sparkline */
+    .price-trend{font-size:12px;}
+    .trend-up{color:var(--red-l);}
+    .trend-down{color:var(--green-l);}
+    .trend-same{color:var(--muted);}
+
+    /* Rentabilité table */
+    .profit-bar{height:8px;border-radius:4px;background:var(--green);display:inline-block;min-width:4px;}
+
+    /* Empty */
+    .empty{text-align:center;padding:40px;color:var(--muted);}
+    .empty .icon{font-size:48px;margin-bottom:12px;}
+
+    /* Alert inline */
+    .alert{padding:10px 16px;border-radius:8px;font-size:13px;margin-bottom:14px;}
+    .alert-error{background:rgba(231,76,60,.15);border:1px solid var(--red-l);color:var(--red-l);}
+    .alert-success{background:rgba(39,174,96,.15);border:1px solid var(--green);color:var(--green-l);}
+
+    /* Waste badge */
+    .waste-tag{font-size:11px;color:var(--orange-l);background:rgba(230,126,34,.12);padding:1px 7px;border-radius:10px;}
+
+    /* Settings */
+    .settings-section{margin-bottom:24px;}
+    .settings-section h3{font-size:15px;margin-bottom:12px;color:var(--text);}
+
+    @media(max-width:600px){
+      .ing-row-top{grid-template-columns:1fr auto;}
+      .ing-row-sizes{grid-template-columns:1fr 1fr;}
+      header h1{font-size:17px;}
     }
-    header .logo { font-size: 28px; }
-    header h1 { font-size: 22px; font-weight: 700; }
-    header p { font-size: 13px; opacity: .8; }
-    header nav { margin-left: auto; display: flex; gap: 8px; }
-    header nav button {
-      background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3);
-      color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer;
-      font-size: 13px; transition: background .2s;
+
+    /* Print */
+    @media print{
+      header,nav,.tabs,.recipe-actions,.btn,#ing-modal,#recipe-modal{display:none!important;}
+      body{background:#fff;color:#000;}
+      .card,.recipe-card{border:1px solid #ccc;background:#fff;}
+      .fc-good,.fc-ok,.fc-bad{color:#000!important;background:#eee!important;}
     }
-    header nav button.active, header nav button:hover { background: rgba(255,255,255,.3); }
-
-    /* ── Layout ── */
-    .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
-
-    /* ── Tabs ── */
-    .tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 2px solid var(--border); }
-    .tab {
-      padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer;
-      font-size: 14px; font-weight: 600; transition: all .2s;
-      border: 2px solid transparent; border-bottom: none; margin-bottom: -2px;
-      color: var(--muted);
-    }
-    .tab.active { background: var(--card); border-color: var(--border); color: var(--text); }
-    .tab:hover:not(.active) { color: var(--text); }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-
-    /* ── Cards ── */
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
-    .card h2 { font-size: 16px; margin-bottom: 16px; color: #fff; }
-
-    /* ── Dashboard stats ── */
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
-    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; text-align: center; }
-    .stat-card .value { font-size: 32px; font-weight: 800; margin-bottom: 4px; }
-    .stat-card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
-    .stat-card.good .value { color: var(--green); }
-    .stat-card.warn .value { color: var(--orange); }
-    .stat-card.bad .value { color: var(--red-light); }
-
-    /* ── Forms ── */
-    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
-    .form-group { display: flex; flex-direction: column; gap: 6px; }
-    .form-group label { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
-    .form-group input, .form-group select, .form-group textarea {
-      background: var(--bg); border: 1px solid var(--border); color: var(--text);
-      border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none; transition: border-color .2s;
-    }
-    .form-group input:focus, .form-group select:focus { border-color: var(--red-light); }
-    .form-group textarea { resize: vertical; min-height: 60px; font-family: inherit; }
-
-    .btn {
-      padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer;
-      font-size: 14px; font-weight: 600; transition: all .2s;
-    }
-    .btn-primary { background: var(--red); color: white; }
-    .btn-primary:hover { background: var(--red-light); }
-    .btn-secondary { background: var(--card2); color: var(--text); border: 1px solid var(--border); }
-    .btn-secondary:hover { background: var(--border); }
-    .btn-danger { background: transparent; color: var(--red-light); border: 1px solid var(--red-light); }
-    .btn-danger:hover { background: var(--red-light); color: white; }
-    .btn-sm { padding: 6px 12px; font-size: 12px; }
-
-    /* ── Tables ── */
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th { text-align: left; padding: 10px 12px; font-size: 11px; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); }
-    td { padding: 12px; border-bottom: 1px solid rgba(45,53,97,.5); vertical-align: middle; }
-    tr:hover td { background: rgba(255,255,255,.03); }
-
-    /* ── Food cost badge ── */
-    .fc-badge {
-      display: inline-block; padding: 3px 10px; border-radius: 20px; font-weight: 700; font-size: 13px;
-    }
-    .fc-good { background: rgba(39,174,96,.2); color: #2ecc71; }
-    .fc-ok   { background: rgba(230,126,34,.2); color: #f39c12; }
-    .fc-bad  { background: rgba(231,76,60,.2);  color: #e74c3c; }
-
-    /* ── Recipe ingredient builder ── */
-    #ing-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
-    .ing-row {
-      display: grid; grid-template-columns: 1fr 100px 80px auto; gap: 8px; align-items: center;
-      background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px;
-    }
-    .ing-row select, .ing-row input { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 8px; font-size: 13px; }
-    .ing-cost-preview { font-size: 11px; color: var(--muted); margin-top: 4px; }
-
-    /* ── Recipe detail panel ── */
-    .recipe-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 16px; margin-bottom: 12px;
-    }
-    .recipe-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .recipe-name { font-size: 18px; font-weight: 700; }
-    .recipe-cat { font-size: 11px; color: var(--muted); background: var(--bg); padding: 2px 8px; border-radius: 10px; }
-    .recipe-meta { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 10px; }
-    .recipe-meta .m { font-size: 13px; }
-    .recipe-meta .m span { font-weight: 700; }
-    .recipe-ings { font-size: 13px; color: var(--muted); }
-    .recipe-actions { display: flex; gap: 8px; margin-top: 12px; }
-
-    /* ── Empty state ── */
-    .empty { text-align: center; padding: 40px; color: var(--muted); }
-    .empty .icon { font-size: 48px; margin-bottom: 12px; }
-
-    /* ── Modal ── */
-    .modal-overlay {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7);
-      z-index: 1000; align-items: center; justify-content: center;
-    }
-    .modal-overlay.open { display: flex; }
-    .modal {
-      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-      padding: 28px; width: 90%; max-width: 640px; max-height: 90vh; overflow-y: auto;
-    }
-    .modal h2 { margin-bottom: 20px; font-size: 18px; }
-    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-
-    /* ── Responsive ── */
-    @media (max-width: 600px) {
-      .ing-row { grid-template-columns: 1fr 80px; }
-      .ing-row .ing-unit-label, .ing-row button { grid-column: span 1; }
-    }
-
-    .separator { height: 1px; background: var(--border); margin: 20px 0; }
-    .alert { padding: 10px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
-    .alert-success { background: rgba(39,174,96,.15); border: 1px solid var(--green); color: #2ecc71; }
-    .alert-error   { background: rgba(231,76,60,.15);  border: 1px solid var(--red-light); color: #e74c3c; }
-
-    .search-bar { padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 14px; width: 100%; margin-bottom: 16px; outline: none; }
-    .search-bar:focus { border-color: var(--red-light); }
   </style>
 </head>
 <body>
-
 <header>
   <div class="logo">🍕</div>
   <div>
@@ -170,73 +201,140 @@
     <p>Calculateur de coût matière</p>
   </div>
   <nav>
+    <button onclick="window.print()">🖨️ Imprimer</button>
     <button onclick="window.location='/'">📱 Social Posts</button>
   </nav>
 </header>
 
 <div class="container">
+  <!-- Alerte food cost -->
+  <div class="alert-banner" id="fc-alert-banner"></div>
 
   <!-- TABS -->
   <div class="tabs">
-    <div class="tab active" onclick="switchTab('dashboard')">📊 Dashboard</div>
-    <div class="tab" onclick="switchTab('recipes')">🍕 Recettes</div>
-    <div class="tab" onclick="switchTab('ingredients')">🧀 Ingrédients</div>
+    <div class="tab active"  onclick="switchTab('dashboard')">📊 Dashboard</div>
+    <div class="tab"         onclick="switchTab('recipes')">🍕 Recettes</div>
+    <div class="tab"         onclick="switchTab('ingredients')">🧀 Ingrédients</div>
+    <div class="tab"         onclick="switchTab('rentabilite')">💰 Rentabilité</div>
+    <div class="tab"         onclick="switchTab('ai')">🤖 Analyse IA</div>
+    <div class="tab"         onclick="switchTab('settings')">⚙️ Paramètres</div>
   </div>
 
-  <!-- ═══════════════════════════════════════════ DASHBOARD ═══ -->
+  <!-- ══ DASHBOARD ══════════════════════════════════════════════ -->
   <div id="tab-dashboard" class="tab-content active">
     <div class="stats-grid" id="stats-grid">
-      <div class="stat-card"><div class="value" id="stat-recipes">—</div><div class="label">Recettes</div></div>
-      <div class="stat-card" id="stat-fc-card"><div class="value" id="stat-fc">—</div><div class="label">Food Cost moyen</div></div>
-      <div class="stat-card"><div class="value" id="stat-ings">—</div><div class="label">Ingrédients</div></div>
-      <div class="stat-card good"><div class="value" id="stat-best">—</div><div class="label">Meilleure marge</div></div>
-      <div class="stat-card bad"><div class="value" id="stat-worst">—</div><div class="label">Food cost le plus élevé</div></div>
+      <div class="stat-card"><div class="val" id="s-recipes">—</div><div class="lbl">Recettes</div></div>
+      <div class="stat-card" id="s-fc-card"><div class="val" id="s-fc">—</div><div class="lbl">Food cost moyen</div></div>
+      <div class="stat-card"><div class="val" id="s-ings">—</div><div class="lbl">Ingrédients</div></div>
+      <div class="stat-card blue"><div class="val" id="s-revenue">—</div><div class="lbl">CA mensuel estimé</div></div>
+      <div class="stat-card good"><div class="val" id="s-profit">—</div><div class="lbl">Marge mensuelle estimée</div></div>
     </div>
-
-    <div class="card" id="dashboard-recipes-card">
-      <h2>Vue d'ensemble des recettes</h2>
-      <div id="dashboard-recipes"></div>
+    <div class="charts-grid">
+      <div class="chart-card"><h3>Food cost par recette (%)</h3><canvas id="chart-fc" height="220"></canvas></div>
+      <div class="chart-card"><h3>Marge brute par recette (€)</h3><canvas id="chart-margin" height="220"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Récapitulatif</h2>
+      <div id="dashboard-table"></div>
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════ RECETTES ════ -->
+  <!-- ══ RECETTES ═══════════════════════════════════════════════ -->
   <div id="tab-recipes" class="tab-content">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
       <h2 style="font-size:18px;">Mes recettes</h2>
       <button class="btn btn-primary" onclick="openRecipeModal()">+ Nouvelle recette</button>
     </div>
-    <input class="search-bar" type="text" placeholder="🔍 Rechercher une recette…" id="recipe-search" oninput="renderRecipes()">
+    <input class="search-bar" type="text" placeholder="🔍 Rechercher…" id="recipe-search" oninput="renderRecipes()">
     <div id="recipes-list"></div>
   </div>
 
-  <!-- ═══════════════════════════════════════════ INGRÉDIENTS ═ -->
+  <!-- ══ INGRÉDIENTS ════════════════════════════════════════════ -->
   <div id="tab-ingredients" class="tab-content">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
       <h2 style="font-size:18px;">Mes ingrédients</h2>
       <button class="btn btn-primary" onclick="openIngModal()">+ Nouvel ingrédient</button>
     </div>
-    <input class="search-bar" type="text" placeholder="🔍 Rechercher un ingrédient…" id="ing-search" oninput="renderIngredients()">
+    <input class="search-bar" type="text" placeholder="🔍 Rechercher…" id="ing-search" oninput="renderIngredients()">
     <div class="card">
       <div class="table-wrap">
         <table>
-          <thead><tr>
-            <th>Nom</th><th>Catégorie</th><th>Unité</th><th>Prix achat</th><th>Qté achat</th><th>Coût / unité</th><th>Actions</th>
-          </tr></thead>
+          <thead><tr><th>Nom</th><th>Catégorie</th><th>Unité</th><th>Prix achat</th><th>Qté</th><th>Coût/unité</th><th>Perte</th><th>Coût réel/u</th><th>Tendance</th><th>Actions</th></tr></thead>
           <tbody id="ing-table"></tbody>
         </table>
       </div>
     </div>
   </div>
+
+  <!-- ══ RENTABILITÉ ════════════════════════════════════════════ -->
+  <div id="tab-rentabilite" class="tab-content">
+    <div class="card">
+      <h2>Rentabilité mensuelle par recette</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Renseignez le volume vendu par mois dans chaque recette pour voir votre rentabilité estimée.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Recette</th><th>Food cost</th><th>Prix vente</th><th>Marge/pizza</th><th>Ventes/mois</th><th>CA mensuel</th><th>Profit mensuel</th><th>Part du CA</th></tr></thead>
+          <tbody id="profit-table"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card"><h3>Répartition du profit mensuel</h3><canvas id="chart-profit" height="260"></canvas></div>
+      <div class="chart-card"><h3>CA vs Coût matière mensuel</h3><canvas id="chart-ca" height="260"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ══ ANALYSE IA ════════════════════════════════════════════ -->
+  <div id="tab-ai" class="tab-content">
+    <div class="card">
+      <h2>🤖 Analyse IA — Conseils de rentabilité</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Claude analyse vos données food cost et vous donne des recommandations personnalisées pour Pizz'en Seyne.</p>
+      <button class="btn btn-ai" onclick="runAiAnalysis()" id="ai-btn">✨ Lancer l'analyse</button>
+      <div id="ai-loading" style="display:none;margin-top:12px;color:var(--muted);font-size:13px;">⏳ Analyse en cours…</div>
+      <div class="ai-result" id="ai-result"></div>
+    </div>
+  </div>
+
+  <!-- ══ PARAMÈTRES ════════════════════════════════════════════ -->
+  <div id="tab-settings" class="tab-content">
+    <div class="card settings-section">
+      <h2>⚙️ Paramètres food cost</h2>
+      <div class="form-grid" style="max-width:500px;">
+        <div class="form-group">
+          <label>Objectif food cost (%)</label>
+          <input id="set-target-fc" type="number" step="0.5" value="30" placeholder="ex: 30">
+        </div>
+        <div class="form-group">
+          <label>Nom de la pizzeria</label>
+          <input id="set-name" type="text" placeholder="Pizz'en Seyne" value="Pizz'en Seyne">
+        </div>
+      </div>
+      <div style="margin-top:14px;">
+        <button class="btn btn-success" onclick="saveSettings()">💾 Enregistrer</button>
+      </div>
+      <div id="settings-alert" style="margin-top:10px;"></div>
+    </div>
+    <div class="card">
+      <h2>ℹ️ Guide food cost pizzeria</h2>
+      <div style="font-size:13px;line-height:1.9;color:var(--muted);">
+        <p><span class="fc-badge fc-good">≤ 30%</span> — Excellent. Votre recette est très rentable.</p>
+        <p style="margin-top:6px;"><span class="fc-badge fc-ok">31–40%</span> — Acceptable mais optimisable. Regardez vos quantités.</p>
+        <p style="margin-top:6px;"><span class="fc-badge fc-bad">> 40%</span> — Attention ! Cette recette érode votre marge. Réévaluez le prix ou les ingrédients.</p>
+        <p style="margin-top:14px;">Le <strong style="color:var(--text)">taux de perte</strong> (gaspillage) est la quantité d'ingrédient non utilisée (chutes de fromage, légumes abîmés…). Intégrez-le pour un calcul réaliste.</p>
+        <p style="margin-top:6px;">La <strong style="color:var(--text)">taille de pâton</strong> influe directement sur le coût. Pensez à définir les 3 tailles si vous proposez plusieurs formats.</p>
+      </div>
+    </div>
+  </div>
 </div>
 
-<!-- ══ Modal Ingrédient ══════════════════════════════════════════ -->
+<!-- ══ Modal Ingrédient ════════════════════════════════════════ -->
 <div class="modal-overlay" id="ing-modal">
   <div class="modal">
     <h2 id="ing-modal-title">Nouvel ingrédient</h2>
     <div id="ing-alert"></div>
     <div class="form-grid">
-      <div class="form-group" style="grid-column:span 2">
-        <label>Nom de l'ingrédient</label>
+      <div class="form-group span2">
+        <label>Nom</label>
         <input id="ing-name" type="text" placeholder="ex: Mozzarella fior di latte">
       </div>
       <div class="form-group">
@@ -244,27 +342,32 @@
         <select id="ing-category">
           <option>Fromage</option><option>Charcuterie</option><option>Légume</option>
           <option>Sauce</option><option>Farine / Pâte</option><option>Huile / Condiment</option>
-          <option>Fruit de mer</option><option>Viande</option><option>Autre</option>
+          <option>Fruit de mer</option><option>Viande</option><option>Boisson</option><option>Autre</option>
         </select>
       </div>
       <div class="form-group">
         <label>Unité</label>
         <select id="ing-unit">
           <option value="g">g (gramme)</option>
-          <option value="kg">kg (kilogramme)</option>
-          <option value="ml">ml (millilitre)</option>
+          <option value="kg">kg</option>
+          <option value="ml">ml</option>
           <option value="L">L (litre)</option>
           <option value="pcs">pcs (pièce)</option>
           <option value="tranche">tranche</option>
+          <option value="portion">portion</option>
         </select>
       </div>
       <div class="form-group">
         <label>Prix d'achat (€)</label>
-        <input id="ing-price" type="number" step="0.01" placeholder="ex: 4.50">
+        <input id="ing-price" type="number" step="0.01" placeholder="4.50">
       </div>
       <div class="form-group">
         <label>Quantité achetée</label>
-        <input id="ing-qty" type="number" step="0.01" placeholder="ex: 1000 (g dans un kg)">
+        <input id="ing-qty" type="number" step="0.01" placeholder="1000">
+      </div>
+      <div class="form-group">
+        <label>Taux de perte (%)</label>
+        <input id="ing-waste" type="number" step="0.5" min="0" max="100" placeholder="0" value="0">
       </div>
     </div>
     <div class="modal-footer">
@@ -274,48 +377,77 @@
   </div>
 </div>
 
-<!-- ══ Modal Recette ═════════════════════════════════════════════ -->
+<!-- ══ Modal Recette ══════════════════════════════════════════ -->
 <div class="modal-overlay" id="recipe-modal">
   <div class="modal">
     <h2 id="recipe-modal-title">Nouvelle recette</h2>
     <div id="recipe-alert"></div>
-    <div class="form-grid" style="margin-bottom:16px;">
-      <div class="form-group" style="grid-column:span 2">
+    <div class="form-grid" style="margin-bottom:14px;">
+      <div class="form-group span2">
         <label>Nom de la recette</label>
-        <input id="rec-name" type="text" placeholder="ex: Margherita, Reine, 4 Fromages…">
+        <input id="rec-name" type="text" placeholder="ex: Margherita">
       </div>
       <div class="form-group">
         <label>Catégorie</label>
         <select id="rec-category">
           <option>Pizza classique</option><option>Pizza blanche</option>
           <option>Pizza végétarienne</option><option>Pizza spéciale</option>
-          <option>Calzone</option><option>Dessert</option><option>Autre</option>
+          <option>Calzone</option><option>Dessert</option><option>Entrée</option><option>Autre</option>
         </select>
       </div>
       <div class="form-group">
-        <label>Prix de vente (€)</label>
-        <input id="rec-price" type="number" step="0.01" placeholder="ex: 12.00" oninput="updateCostPreview()">
+        <label>Ventes / mois (volume)</label>
+        <input id="rec-volume" type="number" step="1" min="0" placeholder="ex: 80" oninput="updateCostPreview()">
       </div>
-      <div class="form-group" style="grid-column:span 2">
+      <div class="form-group span2">
         <label>Notes</label>
         <textarea id="rec-notes" placeholder="Taille, variante, remarques…"></textarea>
       </div>
     </div>
 
-    <div class="separator"></div>
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+    <!-- Prix par taille -->
+    <div class="sep"></div>
+    <strong style="font-size:14px;">Prix de vente</strong>
+    <div class="form-grid" style="margin-top:10px;margin-bottom:6px;">
+      <div class="form-group">
+        <label>Prix principal (€) *</label>
+        <input id="rec-price" type="number" step="0.01" placeholder="12.00" oninput="updateCostPreview()">
+      </div>
+      <div class="form-group">
+        <label>Prix petite (€) <span style="font-weight:normal;opacity:.6">optionnel</span></label>
+        <input id="rec-price-small" type="number" step="0.01" placeholder="9.00" oninput="updateCostPreview()">
+      </div>
+      <div class="form-group">
+        <label>Prix moyenne (€)</label>
+        <input id="rec-price-medium" type="number" step="0.01" placeholder="12.00" oninput="updateCostPreview()">
+      </div>
+      <div class="form-group">
+        <label>Prix grande (€)</label>
+        <input id="rec-price-large" type="number" step="0.01" placeholder="15.00" oninput="updateCostPreview()">
+      </div>
+    </div>
+
+    <!-- Ingrédients -->
+    <div class="sep"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
       <strong style="font-size:14px;">Ingrédients</strong>
-      <button class="btn btn-secondary btn-sm" onclick="addIngredientRow()">+ Ajouter</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <label style="font-size:12px;color:var(--muted);">Mode :</label>
+        <div class="sizes-toggle">
+          <button class="sz-btn active" id="mode-simple" onclick="setMode('simple')">Simple</button>
+          <button class="sz-btn" id="mode-sizes" onclick="setMode('sizes')">3 tailles</button>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="addIngredientRow()">+ Ajouter</button>
+      </div>
     </div>
     <div id="ing-list"></div>
 
-    <div class="separator"></div>
-    <div style="background:var(--bg); border-radius:8px; padding:12px; font-size:14px;" id="cost-preview">
-      <span style="color:var(--muted)">Coût matière : </span><span id="prev-cost">—</span>
-      &nbsp;&nbsp;|&nbsp;&nbsp;
-      <span style="color:var(--muted)">Food cost : </span><span id="prev-fc">—</span>
-      &nbsp;&nbsp;|&nbsp;&nbsp;
-      <span style="color:var(--muted)">Marge brute : </span><span id="prev-margin">—</span>
+    <!-- Preview -->
+    <div class="preview-bar" id="cost-preview">
+      <div class="pv"><span>Coût matière</span><span id="prev-cost">—</span></div>
+      <div class="pv"><span>Food cost</span><span id="prev-fc">—</span></div>
+      <div class="pv"><span>Marge brute</span><span id="prev-margin">—</span></div>
+      <div class="pv" id="prev-monthly-wrap" style="display:none"><span>Profit mensuel</span><span id="prev-monthly">—</span></div>
     </div>
 
     <div class="modal-footer">
@@ -326,95 +458,225 @@
 </div>
 
 <script>
-// ── State ───────────────────────────────────────────────────────
-let ingredients = [];
-let recipes = [];
-let editingIngId = null;
-let editingRecipeId = null;
+// ── State ─────────────────────────────────────────────────────────
+let ingredients = [], recipes = [], settings = {};
+let editingIngId = null, editingRecipeId = null;
+let ingMode = 'simple';
+let fcChart = null, marginChart = null, profitChart = null, caChart = null;
 
-// ── Bootstrap ────────────────────────────────────────────────────
+// ── Bootstrap ─────────────────────────────────────────────────────
 async function init() {
-  await Promise.all([loadIngredients(), loadRecipes()]);
+  await Promise.all([loadIngredients(), loadRecipes(), loadSettings()]);
+  applySettings();
   renderDashboard();
   renderIngredients();
   renderRecipes();
+  renderProfitTab();
 }
 
-async function loadIngredients() {
-  const r = await fetch('/api/fc/ingredients');
-  ingredients = await r.json();
-}
-async function loadRecipes() {
-  const r = await fetch('/api/fc/recipes');
-  recipes = await r.json();
+async function loadIngredients() { const r = await fetch('/api/fc/ingredients'); ingredients = await r.json(); }
+async function loadRecipes()     { const r = await fetch('/api/fc/recipes');     recipes     = await r.json(); }
+async function loadSettings()    { const r = await fetch('/api/fc/settings');    settings    = await r.json(); }
+
+function applySettings() {
+  if (settings.target_fc) document.getElementById('set-target-fc').value = settings.target_fc;
+  if (settings.name)      document.getElementById('set-name').value      = settings.name;
 }
 
-// ── Tabs ─────────────────────────────────────────────────────────
+// ── Tabs ──────────────────────────────────────────────────────────
 function switchTab(name) {
-  document.querySelectorAll('.tab').forEach((t,i) => {
-    const tabs = ['dashboard','recipes','ingredients'];
-    t.classList.toggle('active', tabs[i] === name);
-  });
+  const names = ['dashboard','recipes','ingredients','rentabilite','ai','settings'];
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i] === name));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if (name === 'dashboard')   renderDashboard();
+  if (name === 'rentabilite') renderProfitTab();
 }
 
-// ── Dashboard ────────────────────────────────────────────────────
-function fcColor(pct) {
-  if (pct <= 30) return 'fc-good';
-  if (pct <= 40) return 'fc-ok';
+// ── FC color ──────────────────────────────────────────────────────
+function fcClass(pct) {
+  const t = parseFloat(settings.target_fc || 30);
+  if (pct <= t)       return 'fc-good';
+  if (pct <= t * 1.3) return 'fc-ok';
   return 'fc-bad';
 }
+function fcColor(pct) {
+  const t = parseFloat(settings.target_fc || 30);
+  if (pct <= t)       return '#2ecc71';
+  if (pct <= t * 1.3) return '#f39c12';
+  return '#e74c3c';
+}
 
+// ── Dashboard ─────────────────────────────────────────────────────
 async function renderDashboard() {
   const r = await fetch('/api/fc/stats');
   const s = await r.json();
-  document.getElementById('stat-recipes').textContent = s.total_recipes;
-  document.getElementById('stat-ings').textContent = s.ingredient_count;
-  const fcEl = document.getElementById('stat-fc');
-  fcEl.textContent = s.avg_food_cost_pct ? s.avg_food_cost_pct + ' %' : '—';
-  const card = document.getElementById('stat-fc-card');
-  card.className = 'stat-card ' + (s.avg_food_cost_pct <= 30 ? 'good' : s.avg_food_cost_pct <= 40 ? 'warn' : 'bad');
-  document.getElementById('stat-best').textContent = s.best_recipe ? s.best_recipe.name + ' (' + s.best_recipe.food_cost_pct + '%)' : '—';
-  document.getElementById('stat-worst').textContent = s.worst_recipe ? s.worst_recipe.name + ' (' + s.worst_recipe.food_cost_pct + '%)' : '—';
+  document.getElementById('s-recipes').textContent  = s.total_recipes;
+  document.getElementById('s-ings').textContent     = s.ingredient_count;
+  document.getElementById('s-fc').textContent       = s.avg_food_cost_pct ? s.avg_food_cost_pct + '%' : '—';
+  document.getElementById('s-revenue').textContent  = s.total_monthly_revenue ? s.total_monthly_revenue.toFixed(0) + ' €' : '—';
+  document.getElementById('s-profit').textContent   = s.total_monthly_profit  ? s.total_monthly_profit.toFixed(0)  + ' €' : '—';
+  const fc_card = document.getElementById('s-fc-card');
+  fc_card.className = 'stat-card ' + (s.avg_food_cost_pct <= (s.target_fc||30) ? 'good' : s.avg_food_cost_pct <= (s.target_fc||30)*1.3 ? 'warn' : 'bad');
 
-  const el = document.getElementById('dashboard-recipes');
-  if (!recipes.length) { el.innerHTML = '<div class="empty"><div class="icon">🍕</div><p>Aucune recette encore. Commencez par ajouter vos pizzas !</p></div>'; return; }
-  el.innerHTML = `
-    <div class="table-wrap">
-    <table>
-      <thead><tr><th>Recette</th><th>Catégorie</th><th>Coût matière</th><th>Prix vente</th><th>Marge</th><th>Food Cost</th></tr></thead>
-      <tbody>${recipes.map(r => `
-        <tr>
-          <td><strong>${r.name}</strong></td>
-          <td>${r.category}</td>
-          <td>${r.ingredient_cost.toFixed(2)} €</td>
-          <td>${r.selling_price.toFixed(2)} €</td>
-          <td>${r.margin.toFixed(2)} €</td>
-          <td><span class="fc-badge ${fcColor(r.food_cost_pct)}">${r.food_cost_pct} %</span></td>
-        </tr>`).join('')}
-      </tbody>
+  // Alertes
+  const banner = document.getElementById('fc-alert-banner');
+  if (s.alerts && s.alerts.length) {
+    banner.innerHTML = `⚠️ <strong>${s.alerts.length} recette(s) dépassent votre objectif food cost (${s.target_fc}%) :</strong> ${s.alerts.map(a => `${a.name} (${a.fc}%)`).join(', ')}`;
+    banner.classList.add('show');
+  } else {
+    banner.classList.remove('show');
+  }
+
+  // Tableau récap
+  const el = document.getElementById('dashboard-table');
+  if (!recipes.length) { el.innerHTML = '<div class="empty"><div class="icon">🍕</div><p>Aucune recette. Commencez par créer vos pizzas !</p></div>'; }
+  else {
+    el.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Recette</th><th>Catégorie</th><th>Coût mat.</th><th>Prix vente</th><th>Marge</th><th>Food cost</th></tr></thead>
+      <tbody>${recipes.map(r => `<tr>
+        <td><strong>${r.name}</strong></td>
+        <td>${r.category}</td>
+        <td>${r.ingredient_cost.toFixed(2)} €</td>
+        <td>${r.selling_price.toFixed(2)} €</td>
+        <td>${r.margin.toFixed(2)} €</td>
+        <td><span class="fc-badge ${fcClass(r.food_cost_pct)}">${r.food_cost_pct} %</span></td>
+      </tr>`).join('')}</tbody>
     </table></div>`;
+  }
+
+  renderCharts(s);
 }
 
-// ── Ingredients render ───────────────────────────────────────────
+function renderCharts(s) {
+  const names = recipes.map(r => r.name);
+  const fcs   = recipes.map(r => r.food_cost_pct);
+  const margins = recipes.map(r => r.margin);
+  const target = parseFloat(s.target_fc || 30);
+
+  if (fcChart) fcChart.destroy();
+  if (marginChart) marginChart.destroy();
+  const ctx1 = document.getElementById('chart-fc').getContext('2d');
+  const ctx2 = document.getElementById('chart-margin').getContext('2d');
+
+  fcChart = new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: names,
+      datasets: [{
+        label: 'Food cost %',
+        data: fcs,
+        backgroundColor: fcs.map(v => v <= target ? 'rgba(46,204,113,.7)' : v <= target*1.3 ? 'rgba(243,156,18,.7)' : 'rgba(231,76,60,.7)'),
+        borderRadius: 6,
+      },{
+        label: `Objectif (${target}%)`,
+        data: names.map(() => target),
+        type: 'line',
+        borderColor: '#e74c3c',
+        borderDash: [5,5],
+        pointRadius: 0,
+        fill: false,
+      }]
+    },
+    options: {responsive:true, plugins:{legend:{labels:{color:'#8892b0',font:{size:11}}}},
+              scales:{x:{ticks:{color:'#8892b0'}},y:{ticks:{color:'#8892b0'},grid:{color:'rgba(255,255,255,.05)'}}}}
+  });
+
+  marginChart = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: names,
+      datasets: [{
+        label: 'Marge (€)',
+        data: margins,
+        backgroundColor: 'rgba(52,152,219,.7)',
+        borderRadius: 6,
+      }]
+    },
+    options: {responsive:true, plugins:{legend:{labels:{color:'#8892b0',font:{size:11}}}},
+              scales:{x:{ticks:{color:'#8892b0'}},y:{ticks:{color:'#8892b0'},grid:{color:'rgba(255,255,255,.05)'}}}}
+  });
+}
+
+// ── Rentabilité ───────────────────────────────────────────────────
+function renderProfitTab() {
+  const tbody = document.getElementById('profit-table');
+  const totalCA = recipes.reduce((s, r) => s + (r.monthly_revenue || 0), 0);
+  tbody.innerHTML = recipes.map(r => {
+    const share = totalCA > 0 ? ((r.monthly_revenue || 0) / totalCA * 100).toFixed(1) : 0;
+    const barW = Math.min(100, share * 2);
+    return `<tr>
+      <td><strong>${r.name}</strong></td>
+      <td><span class="fc-badge ${fcClass(r.food_cost_pct)}">${r.food_cost_pct}%</span></td>
+      <td>${r.selling_price.toFixed(2)} €</td>
+      <td>${r.margin.toFixed(2)} €</td>
+      <td>${r.monthly_volume || 0}</td>
+      <td>${(r.monthly_revenue || 0).toFixed(0)} €</td>
+      <td><strong style="color:#2ecc71">${(r.monthly_profit || 0).toFixed(0)} €</strong></td>
+      <td><span class="profit-bar" style="width:${barW}px;margin-right:6px"></span>${share}%</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8"><div class="empty"><div class="icon">💰</div><p>Aucune recette.</p></div></td></tr>';
+
+  // Charts rentabilité
+  if (profitChart) profitChart.destroy();
+  if (caChart) caChart.destroy();
+  const withVol = recipes.filter(r => r.monthly_volume > 0);
+  if (!withVol.length) return;
+
+  const ctx3 = document.getElementById('chart-profit').getContext('2d');
+  const ctx4 = document.getElementById('chart-ca').getContext('2d');
+  const colors = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#e91e63'];
+
+  profitChart = new Chart(ctx3, {
+    type: 'doughnut',
+    data: {
+      labels: withVol.map(r => r.name),
+      datasets: [{data: withVol.map(r => r.monthly_profit || 0), backgroundColor: colors, borderWidth: 0}]
+    },
+    options: {responsive:true, plugins:{legend:{labels:{color:'#8892b0',font:{size:11}}}}}
+  });
+
+  caChart = new Chart(ctx4, {
+    type: 'bar',
+    data: {
+      labels: withVol.map(r => r.name),
+      datasets: [
+        {label:'CA (€)',         data: withVol.map(r => r.monthly_revenue || 0), backgroundColor:'rgba(52,152,219,.7)', borderRadius:6},
+        {label:'Coût mat. (€)',  data: withVol.map(r => ((r.ingredient_cost||0)*(r.monthly_volume||0))), backgroundColor:'rgba(231,76,60,.7)', borderRadius:6},
+      ]
+    },
+    options: {responsive:true, plugins:{legend:{labels:{color:'#8892b0',font:{size:11}}}},
+              scales:{x:{ticks:{color:'#8892b0'}},y:{ticks:{color:'#8892b0'},grid:{color:'rgba(255,255,255,.05)'}}}}
+  });
+}
+
+// ── Ingredients render ────────────────────────────────────────────
 function renderIngredients() {
-  const q = (document.getElementById('ing-search')?.value || '').toLowerCase();
-  const filtered = ingredients.filter(i => i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q));
+  const q = (document.getElementById('ing-search')?.value||'').toLowerCase();
+  const filtered = ingredients.filter(i => i.name.toLowerCase().includes(q) || (i.category||'').toLowerCase().includes(q));
   const tbody = document.getElementById('ing-table');
-  if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="icon">🧀</div><p>Aucun ingrédient trouvé.</p></div></td></tr>';
-    return;
-  }
+  if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="10"><div class="empty"><div class="icon">🧀</div><p>Aucun ingrédient.</p></div></td></tr>'; return; }
   tbody.innerHTML = filtered.map(i => {
-    const unitCost = i.purchase_price / i.purchase_quantity;
+    const uc = i.purchase_price / i.purchase_quantity;
+    const ucReal = uc * (1 + (i.waste_pct||0)/100);
+    const hist = i.price_history || [];
+    let trend = '<span class="trend-same">—</span>';
+    if (hist.length >= 2) {
+      const prev = hist[hist.length-2].price / hist[hist.length-2].qty;
+      const curr = hist[hist.length-1].price / hist[hist.length-1].qty;
+      if (curr > prev * 1.005) trend = `<span class="trend-up">↑ +${((curr-prev)/prev*100).toFixed(1)}%</span>`;
+      else if (curr < prev * 0.995) trend = `<span class="trend-down">↓ ${((curr-prev)/prev*100).toFixed(1)}%</span>`;
+    }
     return `<tr>
       <td><strong>${i.name}</strong></td>
       <td>${i.category}</td>
       <td>${i.unit}</td>
       <td>${i.purchase_price.toFixed(2)} €</td>
       <td>${i.purchase_quantity} ${i.unit}</td>
-      <td><strong>${unitCost.toFixed(4)} € / ${i.unit}</strong></td>
+      <td>${uc.toFixed(4)} €</td>
+      <td>${i.waste_pct > 0 ? `<span class="waste-tag">${i.waste_pct}%</span>` : '—'}</td>
+      <td><strong>${ucReal.toFixed(4)} €</strong></td>
+      <td class="price-trend">${trend}</td>
       <td>
         <button class="btn btn-secondary btn-sm" onclick="openIngModal(${i.id})">✏️</button>
         <button class="btn btn-danger btn-sm" onclick="deleteIngredient(${i.id})">🗑</button>
@@ -423,30 +685,43 @@ function renderIngredients() {
   }).join('');
 }
 
-// ── Recipes render ───────────────────────────────────────────────
+// ── Recipes render ────────────────────────────────────────────────
 function renderRecipes() {
-  const q = (document.getElementById('recipe-search')?.value || '').toLowerCase();
-  const filtered = recipes.filter(r => r.name.toLowerCase().includes(q) || r.category.toLowerCase().includes(q));
+  const q = (document.getElementById('recipe-search')?.value||'').toLowerCase();
+  const filtered = recipes.filter(r => r.name.toLowerCase().includes(q) || (r.category||'').toLowerCase().includes(q));
   const el = document.getElementById('recipes-list');
-  if (!filtered.length) {
-    el.innerHTML = '<div class="empty"><div class="icon">🍕</div><p>Aucune recette. Cliquez sur "+ Nouvelle recette" pour commencer.</p></div>';
-    return;
-  }
+  if (!filtered.length) { el.innerHTML = '<div class="empty"><div class="icon">🍕</div><p>Aucune recette. Cliquez sur "+ Nouvelle recette".</p></div>'; return; }
   el.innerHTML = filtered.map(r => {
-    const ingsHtml = r.ingredients.map(i => `${i.quantity} ${i.unit} ${i.name}`).join(', ');
+    const ingsHtml = (r.ingredients||[]).map(i => `${i.quantity}${i.unit} ${i.name}`).join(' · ');
+    const hasSizes = r.selling_price_small > 0 || r.selling_price_medium > 0 || r.selling_price_large > 0;
+    let sizesHtml = '';
+    if (hasSizes) {
+      const sizeData = [
+        {lbl:'Petite', price: r.selling_price_small, cost: r.cost_small, fc: r.fc_pct_small},
+        {lbl:'Moyenne',price: r.selling_price_medium,cost: r.cost_medium,fc: r.fc_pct_medium},
+        {lbl:'Grande', price: r.selling_price_large, cost: r.cost_large, fc: r.fc_pct_large},
+      ].filter(s => s.price > 0);
+      sizesHtml = `<div class="recipe-sizes">${sizeData.map(s => `
+        <div class="size-box">
+          <div class="size-lbl">${s.lbl} — ${s.price.toFixed(2)} €</div>
+          <div class="size-val"><span class="fc-badge ${fcClass(s.fc)}">${s.fc}%</span> marge ${(s.price-s.cost).toFixed(2)} €</div>
+        </div>`).join('')}</div>`;
+    }
     return `<div class="recipe-card">
       <div class="recipe-header">
         <span class="recipe-name">${r.name}</span>
         <span class="recipe-cat">${r.category}</span>
       </div>
+      ${sizesHtml}
       <div class="recipe-meta">
-        <div class="m">Coût matière : <span>${r.ingredient_cost.toFixed(2)} €</span></div>
-        <div class="m">Prix vente : <span>${r.selling_price.toFixed(2)} €</span></div>
-        <div class="m">Marge brute : <span>${r.margin.toFixed(2)} €</span></div>
-        <div class="m">Food cost : <span class="fc-badge ${fcColor(r.food_cost_pct)}">${r.food_cost_pct} %</span></div>
+        <div class="m">Coût mat. : <span>${r.ingredient_cost.toFixed(2)} €</span></div>
+        <div class="m">Prix : <span>${r.selling_price.toFixed(2)} €</span></div>
+        <div class="m">Marge : <span>${r.margin.toFixed(2)} €</span></div>
+        <div class="m">Food cost : <span class="fc-badge ${fcClass(r.food_cost_pct)}">${r.food_cost_pct} %</span></div>
+        ${r.monthly_volume > 0 ? `<div class="m">Profit/mois : <span style="color:#2ecc71">${r.monthly_profit.toFixed(0)} €</span></div>` : ''}
       </div>
       ${ingsHtml ? `<div class="recipe-ings">📋 ${ingsHtml}</div>` : ''}
-      ${r.notes ? `<div class="recipe-ings" style="margin-top:6px">💬 ${r.notes}</div>` : ''}
+      ${r.notes ? `<div class="recipe-ings" style="margin-top:4px">💬 ${r.notes}</div>` : ''}
       <div class="recipe-actions">
         <button class="btn btn-secondary btn-sm" onclick="openRecipeModal(${r.id})">✏️ Modifier</button>
         <button class="btn btn-danger btn-sm" onclick="deleteRecipe(${r.id})">🗑 Supprimer</button>
@@ -455,23 +730,21 @@ function renderRecipes() {
   }).join('');
 }
 
-// ── Ingredient Modal ─────────────────────────────────────────────
-function openIngModal(id = null) {
+// ── Ingredient Modal ──────────────────────────────────────────────
+function openIngModal(id=null) {
   editingIngId = id;
   document.getElementById('ing-alert').innerHTML = '';
+  const fill = (sel, val) => { document.getElementById(sel).value = val; };
   if (id) {
-    const ing = ingredients.find(i => i.id === id);
+    const i = ingredients.find(x => x.id === id);
     document.getElementById('ing-modal-title').textContent = 'Modifier l\'ingrédient';
-    document.getElementById('ing-name').value = ing.name;
-    document.getElementById('ing-unit').value = ing.unit;
-    document.getElementById('ing-price').value = ing.purchase_price;
-    document.getElementById('ing-qty').value = ing.purchase_quantity;
-    document.getElementById('ing-category').value = ing.category;
+    fill('ing-name', i.name); fill('ing-unit', i.unit);
+    fill('ing-price', i.purchase_price); fill('ing-qty', i.purchase_quantity);
+    fill('ing-category', i.category); fill('ing-waste', i.waste_pct || 0);
   } else {
     document.getElementById('ing-modal-title').textContent = 'Nouvel ingrédient';
-    document.getElementById('ing-name').value = '';
-    document.getElementById('ing-price').value = '';
-    document.getElementById('ing-qty').value = '';
+    ['ing-name','ing-price','ing-qty'].forEach(id => fill(id,''));
+    fill('ing-waste','0');
   }
   document.getElementById('ing-modal').classList.add('open');
 }
@@ -484,44 +757,55 @@ async function saveIngredient() {
     purchase_price: parseFloat(document.getElementById('ing-price').value),
     purchase_quantity: parseFloat(document.getElementById('ing-qty').value),
     category: document.getElementById('ing-category').value,
+    waste_pct: parseFloat(document.getElementById('ing-waste').value) || 0,
   };
   if (!data.name || isNaN(data.purchase_price) || isNaN(data.purchase_quantity)) {
-    document.getElementById('ing-alert').innerHTML = '<div class="alert alert-error">Veuillez remplir tous les champs obligatoires.</div>';
+    document.getElementById('ing-alert').innerHTML = '<div class="alert alert-error">Remplissez tous les champs obligatoires.</div>';
     return;
   }
   const url = editingIngId ? `/api/fc/ingredients/${editingIngId}` : '/api/fc/ingredients';
-  const method = editingIngId ? 'PUT' : 'POST';
-  await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+  await fetch(url, {method: editingIngId?'PUT':'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
   closeIngModal();
-  await loadIngredients();
-  renderIngredients();
-  await loadRecipes(); renderRecipes(); renderDashboard();
+  await Promise.all([loadIngredients(), loadRecipes()]);
+  renderIngredients(); renderRecipes(); renderDashboard();
 }
 
 async function deleteIngredient(id) {
   if (!confirm('Supprimer cet ingrédient ?')) return;
-  await fetch(`/api/fc/ingredients/${id}`, { method: 'DELETE' });
+  await fetch(`/api/fc/ingredients/${id}`, {method:'DELETE'});
   await loadIngredients(); renderIngredients();
 }
 
-// ── Recipe Modal ─────────────────────────────────────────────────
-function openRecipeModal(id = null) {
+// ── Recipe Modal ──────────────────────────────────────────────────
+function setMode(m) {
+  ingMode = m;
+  document.getElementById('mode-simple').classList.toggle('active', m==='simple');
+  document.getElementById('mode-sizes').classList.toggle('active', m==='sizes');
+  document.querySelectorAll('.ing-row-sizes').forEach(el => el.style.display = m==='sizes' ? 'grid' : 'none');
+}
+
+function openRecipeModal(id=null) {
   editingRecipeId = id;
   document.getElementById('recipe-alert').innerHTML = '';
   document.getElementById('ing-list').innerHTML = '';
+  const fill = (sel, val) => { document.getElementById(sel).value = val; };
   if (id) {
     const rec = recipes.find(r => r.id === id);
     document.getElementById('recipe-modal-title').textContent = 'Modifier la recette';
-    document.getElementById('rec-name').value = rec.name;
-    document.getElementById('rec-category').value = rec.category;
-    document.getElementById('rec-price').value = rec.selling_price;
-    document.getElementById('rec-notes').value = rec.notes || '';
-    rec.ingredients.forEach(i => addIngredientRow(i.ingredient_id, i.quantity));
+    fill('rec-name', rec.name); fill('rec-category', rec.category);
+    fill('rec-price', rec.selling_price); fill('rec-notes', rec.notes||'');
+    fill('rec-volume', rec.monthly_volume||0);
+    fill('rec-price-small', rec.selling_price_small||'');
+    fill('rec-price-medium', rec.selling_price_medium||'');
+    fill('rec-price-large', rec.selling_price_large||'');
+    const hasSizes = rec.ingredients.some(i => i.quantity_small > 0 || i.quantity_medium > 0 || i.quantity_large > 0);
+    setMode(hasSizes ? 'sizes' : 'simple');
+    rec.ingredients.forEach(i => addIngredientRow(i.ingredient_id, i.quantity, i.quantity_small, i.quantity_medium, i.quantity_large));
   } else {
     document.getElementById('recipe-modal-title').textContent = 'Nouvelle recette';
-    document.getElementById('rec-name').value = '';
-    document.getElementById('rec-price').value = '';
-    document.getElementById('rec-notes').value = '';
+    ['rec-name','rec-price','rec-notes','rec-price-small','rec-price-medium','rec-price-large'].forEach(id => fill(id,''));
+    fill('rec-volume','0');
+    setMode('simple');
     addIngredientRow();
   }
   updateCostPreview();
@@ -529,16 +813,23 @@ function openRecipeModal(id = null) {
 }
 function closeRecipeModal() { document.getElementById('recipe-modal').classList.remove('open'); }
 
-function addIngredientRow(ingId = null, qty = '') {
+function addIngredientRow(ingId=null, qty='', qSmall=0, qMedium=0, qLarge=0) {
   const list = document.getElementById('ing-list');
   const row = document.createElement('div');
   row.className = 'ing-row';
-  const opts = ingredients.map(i => `<option value="${i.id}" ${i.id === ingId ? 'selected' : ''}>${i.name} (${i.unit})</option>`).join('');
+  const opts = ingredients.map(i => `<option value="${i.id}" ${i.id===ingId?'selected':''}>${i.name} (${i.unit})</option>`).join('');
   row.innerHTML = `
-    <select onchange="updateCostPreview()">${opts}</select>
-    <input type="number" step="0.01" placeholder="Quantité" value="${qty}" oninput="updateCostPreview()">
-    <span class="ing-unit-label" style="font-size:12px;color:var(--muted)"></span>
-    <button class="btn btn-danger btn-sm" onclick="this.closest('.ing-row').remove(); updateCostPreview()">✕</button>`;
+    <div class="ing-row-top">
+      <select onchange="updateCostPreview()">${opts}</select>
+      <input type="number" step="0.01" placeholder="Qté principale" value="${qty}" oninput="updateCostPreview()">
+      <span class="ing-cost-lbl" style="font-size:11px;color:var(--muted);white-space:nowrap"></span>
+      <button class="btn btn-danger btn-sm" onclick="this.closest('.ing-row').remove();updateCostPreview()">✕</button>
+    </div>
+    <div class="ing-row-sizes" style="display:${ingMode==='sizes'?'grid':'none'}">
+      <div class="form-group"><label>Qté petite</label><input type="number" step="0.01" placeholder="0" value="${qSmall||''}" oninput="updateCostPreview()"></div>
+      <div class="form-group"><label>Qté moyenne</label><input type="number" step="0.01" placeholder="0" value="${qMedium||''}" oninput="updateCostPreview()"></div>
+      <div class="form-group"><label>Qté grande</label><input type="number" step="0.01" placeholder="0" value="${qLarge||''}" oninput="updateCostPreview()"></div>
+    </div>`;
   list.appendChild(row);
   updateCostPreview();
 }
@@ -547,61 +838,125 @@ function updateCostPreview() {
   const rows = document.querySelectorAll('#ing-list .ing-row');
   let total = 0;
   rows.forEach(row => {
-    const sel = row.querySelector('select');
-    const qtyEl = row.querySelector('input');
-    const unitLabel = row.querySelector('.ing-unit-label');
+    const sel = row.querySelector('.ing-row-top select');
+    const qtyEl = row.querySelector('.ing-row-top input[type=number]');
+    const lbl = row.querySelector('.ing-cost-lbl');
     const ing = ingredients.find(i => i.id === parseInt(sel.value));
-    if (!ing || !qtyEl.value) return;
-    const unitCost = ing.purchase_price / ing.purchase_quantity;
-    const cost = unitCost * parseFloat(qtyEl.value);
+    if (!ing || !qtyEl.value) { if(lbl) lbl.textContent=''; return; }
+    const uc = (ing.purchase_price / ing.purchase_quantity) * (1 + (ing.waste_pct||0)/100);
+    const cost = uc * parseFloat(qtyEl.value);
     total += cost;
-    unitLabel.textContent = `= ${cost.toFixed(3)} €`;
+    if (lbl) lbl.textContent = `= ${cost.toFixed(3)} €`;
   });
   const price = parseFloat(document.getElementById('rec-price').value) || 0;
-  const fc = price > 0 ? (total / price * 100).toFixed(1) : '—';
-  const margin = price > 0 ? (price - total).toFixed(2) : '—';
-  document.getElementById('prev-cost').textContent = total.toFixed(3) + ' €';
+  const fc = price > 0 ? (total / price * 100) : null;
+  const margin = price > 0 ? (price - total) : null;
+  const vol = parseInt(document.getElementById('rec-volume').value) || 0;
+  document.getElementById('prev-cost').textContent   = total.toFixed(3) + ' €';
   const fcEl = document.getElementById('prev-fc');
-  fcEl.textContent = fc !== '—' ? fc + ' %' : '—';
-  fcEl.style.color = fc === '—' ? '' : (fc <= 30 ? '#2ecc71' : fc <= 40 ? '#f39c12' : '#e74c3c');
-  document.getElementById('prev-margin').textContent = margin !== '—' ? margin + ' €' : '—';
+  fcEl.textContent = fc !== null ? fc.toFixed(1) + ' %' : '—';
+  fcEl.style.color = fc !== null ? fcColor(fc) : '';
+  document.getElementById('prev-margin').textContent = margin !== null ? margin.toFixed(2) + ' €' : '—';
+  const mWrap = document.getElementById('prev-monthly-wrap');
+  if (vol > 0 && margin !== null) {
+    mWrap.style.display = 'flex';
+    document.getElementById('prev-monthly').textContent = (margin * vol).toFixed(0) + ' €';
+  } else {
+    mWrap.style.display = 'none';
+  }
 }
 
 async function saveRecipe() {
   const rows = document.querySelectorAll('#ing-list .ing-row');
   const ings = [];
   for (const row of rows) {
-    const sel = row.querySelector('select');
-    const qty = parseFloat(row.querySelector('input').value);
-    if (!isNaN(qty) && qty > 0) ings.push({ ingredient_id: parseInt(sel.value), quantity: qty });
+    const sel = row.querySelector('.ing-row-top select');
+    const inputs = row.querySelectorAll('.ing-row-top input[type=number]');
+    const sizeInputs = row.querySelectorAll('.ing-row-sizes input');
+    const qty = parseFloat(inputs[0]?.value);
+    if (!isNaN(qty) && qty > 0) {
+      ings.push({
+        ingredient_id: parseInt(sel.value), quantity: qty,
+        quantity_small:  parseFloat(sizeInputs[0]?.value)||0,
+        quantity_medium: parseFloat(sizeInputs[1]?.value)||0,
+        quantity_large:  parseFloat(sizeInputs[2]?.value)||0,
+      });
+    }
   }
   const data = {
     name: document.getElementById('rec-name').value.trim(),
     category: document.getElementById('rec-category').value,
     selling_price: parseFloat(document.getElementById('rec-price').value),
+    selling_price_small:  parseFloat(document.getElementById('rec-price-small').value)||0,
+    selling_price_medium: parseFloat(document.getElementById('rec-price-medium').value)||0,
+    selling_price_large:  parseFloat(document.getElementById('rec-price-large').value)||0,
     notes: document.getElementById('rec-notes').value.trim(),
+    monthly_volume: parseInt(document.getElementById('rec-volume').value)||0,
     ingredients: ings,
   };
   if (!data.name || isNaN(data.selling_price)) {
-    document.getElementById('recipe-alert').innerHTML = '<div class="alert alert-error">Nom et prix de vente sont obligatoires.</div>';
+    document.getElementById('recipe-alert').innerHTML = '<div class="alert alert-error">Nom et prix de vente obligatoires.</div>';
     return;
   }
   const url = editingRecipeId ? `/api/fc/recipes/${editingRecipeId}` : '/api/fc/recipes';
-  const method = editingRecipeId ? 'PUT' : 'POST';
-  await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+  await fetch(url, {method:editingRecipeId?'PUT':'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
   closeRecipeModal();
-  await loadRecipes(); renderRecipes(); renderDashboard();
+  await loadRecipes(); renderRecipes(); renderDashboard(); renderProfitTab();
 }
 
 async function deleteRecipe(id) {
   if (!confirm('Supprimer cette recette ?')) return;
-  await fetch(`/api/fc/recipes/${id}`, { method: 'DELETE' });
-  await loadRecipes(); renderRecipes(); renderDashboard();
+  await fetch(`/api/fc/recipes/${id}`, {method:'DELETE'});
+  await loadRecipes(); renderRecipes(); renderDashboard(); renderProfitTab();
+}
+
+// ── Settings ──────────────────────────────────────────────────────
+async function saveSettings() {
+  const data = {
+    target_fc: document.getElementById('set-target-fc').value,
+    name: document.getElementById('set-name').value,
+  };
+  await fetch('/api/fc/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+  await loadSettings(); applySettings();
+  document.getElementById('settings-alert').innerHTML = '<div class="alert alert-success">✅ Paramètres enregistrés.</div>';
+  setTimeout(() => document.getElementById('settings-alert').innerHTML = '', 3000);
+  renderDashboard();
+}
+
+// ── AI Analysis ───────────────────────────────────────────────────
+async function runAiAnalysis() {
+  document.getElementById('ai-btn').disabled = true;
+  document.getElementById('ai-loading').style.display = 'block';
+  document.getElementById('ai-result').classList.remove('show');
+  try {
+    const r = await fetch('/api/fc/ai-analysis', {method:'POST'});
+    const data = await r.json();
+    const el = document.getElementById('ai-result');
+    el.innerHTML = formatMarkdown(data.analysis);
+    el.classList.add('show');
+  } catch(e) {
+    document.getElementById('ai-result').innerHTML = '<div class="alert alert-error">Erreur lors de l\'analyse. Vérifiez votre clé API Anthropic dans le fichier .env</div>';
+    document.getElementById('ai-result').classList.add('show');
+  }
+  document.getElementById('ai-loading').style.display = 'none';
+  document.getElementById('ai-btn').disabled = false;
+}
+
+function formatMarkdown(text) {
+  return text
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,  '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm,   '<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,     '<em>$1</em>')
+    .replace(/^- (.+)$/gm,    '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+    .replace(/\n/g, '<br>');
 }
 
 // ── Close modals on overlay click ────────────────────────────────
-document.getElementById('ing-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeIngModal(); });
-document.getElementById('recipe-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeRecipeModal(); });
+document.getElementById('ing-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeIngModal(); });
+document.getElementById('recipe-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeRecipeModal(); });
 
 init();
 </script>
