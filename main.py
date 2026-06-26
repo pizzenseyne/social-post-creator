@@ -52,24 +52,65 @@ def init_db():
         purchase_price REAL NOT NULL,
         purchase_quantity REAL NOT NULL,
         category TEXT DEFAULT 'Autre',
+        waste_pct REAL DEFAULT 0,
+        price_history TEXT DEFAULT '[]',
         created_at TEXT DEFAULT (datetime('now','localtime'))
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS fc_recipes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         category TEXT DEFAULT 'Pizza',
+        selling_price_small REAL DEFAULT 0,
+        selling_price_medium REAL DEFAULT 0,
+        selling_price_large REAL DEFAULT 0,
         selling_price REAL NOT NULL,
         notes TEXT DEFAULT '',
+        monthly_volume INTEGER DEFAULT 0,
         created_at TEXT DEFAULT (datetime('now','localtime'))
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS fc_recipe_ingredients (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         recipe_id INTEGER NOT NULL,
         ingredient_id INTEGER NOT NULL,
+        quantity_small REAL DEFAULT 0,
+        quantity_medium REAL DEFAULT 0,
+        quantity_large REAL DEFAULT 0,
         quantity REAL NOT NULL,
         FOREIGN KEY (recipe_id) REFERENCES fc_recipes(id) ON DELETE CASCADE,
         FOREIGN KEY (ingredient_id) REFERENCES fc_ingredients(id)
     )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS fc_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+    )''')
+    # Migrations pour colonnes manquantes
+    try:
+        c.execute("ALTER TABLE fc_ingredients ADD COLUMN waste_pct REAL DEFAULT 0")
+    except Exception: pass
+    try:
+        c.execute("ALTER TABLE fc_ingredients ADD COLUMN price_history TEXT DEFAULT '[]'")
+    except Exception: pass
+    try:
+        c.execute("ALTER TABLE fc_recipes ADD COLUMN selling_price_small REAL DEFAULT 0")
+    except Exception: pass
+    try:
+        c.execute("ALTER TABLE fc_recipes ADD COLUMN selling_price_medium REAL DEFAULT 0")
+    except Exception: pass
+    try:
+        c.execute("ALTER TABLE fc_recipes ADD COLUMN selling_price_large REAL DEFAULT 0")
+    except Exception: pass
+    try:
+        c.execute("ALTER TABLE fc_recipes ADD COLUMN monthly_volume INTEGER DEFAULT 0")
+    except Exception: pass
+    try:
+        c.execute("ALTER TABLE fc_recipe_ingredients ADD COLUMN quantity_small REAL DEFAULT 0")
+    except Exception: pass
+    try:
+        c.execute("ALTER TABLE fc_recipe_ingredients ADD COLUMN quantity_medium REAL DEFAULT 0")
+    except Exception: pass
+    try:
+        c.execute("ALTER TABLE fc_recipe_ingredients ADD COLUMN quantity_large REAL DEFAULT 0")
+    except Exception: pass
     conn.commit()
     conn.close()
 
@@ -775,8 +816,38 @@ async def serve_foodcost():
 
 
 # ══════════════════════════════════════════════════════════════════
-#  FOOD COST API
+#  FOOD COST API v2
 # ══════════════════════════════════════════════════════════════════
+
+def _compute_recipe(rec: dict, items: list) -> dict:
+    """Calcule coûts pour les 3 tailles + taille principale."""
+    sizes = ["small", "medium", "large"]
+    for size in sizes:
+        cost = sum(
+            ((it["purchase_price"] / it["purchase_quantity"]) * (1 + it.get("waste_pct", 0) / 100)) * it.get(f"quantity_{size}", 0)
+            for it in items
+        )
+        price = rec.get(f"selling_price_{size}", 0) or 0
+        rec[f"cost_{size}"] = round(cost, 4)
+        rec[f"fc_pct_{size}"] = round(cost / price * 100, 2) if price > 0 else 0
+        rec[f"margin_{size}"] = round(price - cost, 4) if price > 0 else 0
+
+    # Taille principale
+    cost_main = sum(
+        ((it["purchase_price"] / it["purchase_quantity"]) * (1 + it.get("waste_pct", 0) / 100)) * it["quantity"]
+        for it in items
+    )
+    price_main = rec.get("selling_price", 0) or 0
+    rec["ingredient_cost"] = round(cost_main, 4)
+    rec["food_cost_pct"] = round(cost_main / price_main * 100, 2) if price_main > 0 else 0
+    rec["margin"] = round(price_main - cost_main, 4)
+
+    # Rentabilité mensuelle estimée
+    vol = rec.get("monthly_volume", 0) or 0
+    rec["monthly_profit"] = round(rec["margin"] * vol, 2)
+    rec["monthly_revenue"] = round(price_main * vol, 2)
+    return rec
+
 
 # ── Ingrédients ──────────────────────────────────────────────────
 
@@ -785,33 +856,60 @@ async def list_ingredients():
     db = get_db()
     rows = db.execute("SELECT * FROM fc_ingredients ORDER BY category, name").fetchall()
     db.close()
-    return [dict(r) for r in rows]
+    result = []
+    for r in rows:
+        d = dict(r)
+        try:
+            d["price_history"] = json.loads(d.get("price_history") or "[]")
+        except Exception:
+            d["price_history"] = []
+        result.append(d)
+    return result
 
 @app.post("/api/fc/ingredients")
 async def create_ingredient(data: dict):
     db = get_db()
+    history = json.dumps([{"date": datetime.now().strftime("%Y-%m-%d"), "price": data["purchase_price"], "qty": data["purchase_quantity"]}])
     cur = db.execute(
-        "INSERT INTO fc_ingredients (name, unit, purchase_price, purchase_quantity, category) VALUES (?,?,?,?,?)",
-        (data["name"], data["unit"], data["purchase_price"], data["purchase_quantity"], data.get("category", "Autre"))
+        "INSERT INTO fc_ingredients (name, unit, purchase_price, purchase_quantity, category, waste_pct, price_history) VALUES (?,?,?,?,?,?,?)",
+        (data["name"], data["unit"], data["purchase_price"], data["purchase_quantity"],
+         data.get("category", "Autre"), data.get("waste_pct", 0), history)
     )
     db.commit()
     row = db.execute("SELECT * FROM fc_ingredients WHERE id=?", (cur.lastrowid,)).fetchone()
     db.close()
-    return dict(row)
+    d = dict(row)
+    d["price_history"] = json.loads(d.get("price_history") or "[]")
+    return d
 
 @app.put("/api/fc/ingredients/{ing_id}")
 async def update_ingredient(ing_id: int, data: dict):
     db = get_db()
+    old = db.execute("SELECT * FROM fc_ingredients WHERE id=?", (ing_id,)).fetchone()
+    if not old:
+        db.close()
+        raise HTTPException(404)
+    # Enregistrer l'historique si le prix change
+    try:
+        history = json.loads(old["price_history"] or "[]")
+    except Exception:
+        history = []
+    new_price = data["purchase_price"]
+    new_qty = data["purchase_quantity"]
+    if old["purchase_price"] != new_price or old["purchase_quantity"] != new_qty:
+        history.append({"date": datetime.now().strftime("%Y-%m-%d"), "price": new_price, "qty": new_qty})
+        history = history[-24:]  # garder 24 entrées max
     db.execute(
-        "UPDATE fc_ingredients SET name=?, unit=?, purchase_price=?, purchase_quantity=?, category=? WHERE id=?",
-        (data["name"], data["unit"], data["purchase_price"], data["purchase_quantity"], data.get("category", "Autre"), ing_id)
+        "UPDATE fc_ingredients SET name=?, unit=?, purchase_price=?, purchase_quantity=?, category=?, waste_pct=?, price_history=? WHERE id=?",
+        (data["name"], data["unit"], new_price, new_qty, data.get("category", "Autre"),
+         data.get("waste_pct", 0), json.dumps(history), ing_id)
     )
     db.commit()
     row = db.execute("SELECT * FROM fc_ingredients WHERE id=?", (ing_id,)).fetchone()
     db.close()
-    if not row:
-        raise HTTPException(404)
-    return dict(row)
+    d = dict(row)
+    d["price_history"] = json.loads(d.get("price_history") or "[]")
+    return d
 
 @app.delete("/api/fc/ingredients/{ing_id}")
 async def delete_ingredient(ing_id: int):
@@ -832,19 +930,15 @@ async def list_recipes():
     for r in recipes:
         rec = dict(r)
         items = db.execute(
-            """SELECT ri.id, ri.quantity, i.id as ingredient_id, i.name, i.unit, i.purchase_price, i.purchase_quantity
+            """SELECT ri.id, ri.quantity, ri.quantity_small, ri.quantity_medium, ri.quantity_large,
+                      i.id as ingredient_id, i.name, i.unit, i.purchase_price, i.purchase_quantity, i.waste_pct
                FROM fc_recipe_ingredients ri
                JOIN fc_ingredients i ON i.id = ri.ingredient_id
                WHERE ri.recipe_id=?""", (rec["id"],)
         ).fetchall()
-        ingredient_cost = sum(
-            (it["purchase_price"] / it["purchase_quantity"]) * it["quantity"]
-            for it in items
-        )
-        rec["ingredients"] = [dict(it) for it in items]
-        rec["ingredient_cost"] = round(ingredient_cost, 4)
-        rec["food_cost_pct"] = round((ingredient_cost / rec["selling_price"] * 100), 2) if rec["selling_price"] > 0 else 0
-        rec["margin"] = round(rec["selling_price"] - ingredient_cost, 4)
+        items_list = [dict(it) for it in items]
+        rec["ingredients"] = items_list
+        rec = _compute_recipe(rec, items_list)
         result.append(rec)
     db.close()
     return result
@@ -853,14 +947,20 @@ async def list_recipes():
 async def create_recipe(data: dict):
     db = get_db()
     cur = db.execute(
-        "INSERT INTO fc_recipes (name, category, selling_price, notes) VALUES (?,?,?,?)",
-        (data["name"], data.get("category", "Pizza"), data["selling_price"], data.get("notes", ""))
+        """INSERT INTO fc_recipes (name, category, selling_price, selling_price_small, selling_price_medium,
+           selling_price_large, notes, monthly_volume) VALUES (?,?,?,?,?,?,?,?)""",
+        (data["name"], data.get("category", "Pizza"), data["selling_price"],
+         data.get("selling_price_small", 0), data.get("selling_price_medium", 0),
+         data.get("selling_price_large", 0), data.get("notes", ""), data.get("monthly_volume", 0))
     )
     recipe_id = cur.lastrowid
     for ing in data.get("ingredients", []):
         db.execute(
-            "INSERT INTO fc_recipe_ingredients (recipe_id, ingredient_id, quantity) VALUES (?,?,?)",
-            (recipe_id, ing["ingredient_id"], ing["quantity"])
+            """INSERT INTO fc_recipe_ingredients
+               (recipe_id, ingredient_id, quantity, quantity_small, quantity_medium, quantity_large)
+               VALUES (?,?,?,?,?,?)""",
+            (recipe_id, ing["ingredient_id"], ing["quantity"],
+             ing.get("quantity_small", 0), ing.get("quantity_medium", 0), ing.get("quantity_large", 0))
         )
     db.commit()
     db.close()
@@ -871,14 +971,21 @@ async def create_recipe(data: dict):
 async def update_recipe(recipe_id: int, data: dict):
     db = get_db()
     db.execute(
-        "UPDATE fc_recipes SET name=?, category=?, selling_price=?, notes=? WHERE id=?",
-        (data["name"], data.get("category", "Pizza"), data["selling_price"], data.get("notes", ""), recipe_id)
+        """UPDATE fc_recipes SET name=?, category=?, selling_price=?, selling_price_small=?,
+           selling_price_medium=?, selling_price_large=?, notes=?, monthly_volume=? WHERE id=?""",
+        (data["name"], data.get("category", "Pizza"), data["selling_price"],
+         data.get("selling_price_small", 0), data.get("selling_price_medium", 0),
+         data.get("selling_price_large", 0), data.get("notes", ""),
+         data.get("monthly_volume", 0), recipe_id)
     )
     db.execute("DELETE FROM fc_recipe_ingredients WHERE recipe_id=?", (recipe_id,))
     for ing in data.get("ingredients", []):
         db.execute(
-            "INSERT INTO fc_recipe_ingredients (recipe_id, ingredient_id, quantity) VALUES (?,?,?)",
-            (recipe_id, ing["ingredient_id"], ing["quantity"])
+            """INSERT INTO fc_recipe_ingredients
+               (recipe_id, ingredient_id, quantity, quantity_small, quantity_medium, quantity_large)
+               VALUES (?,?,?,?,?,?)""",
+            (recipe_id, ing["ingredient_id"], ing["quantity"],
+             ing.get("quantity_small", 0), ing.get("quantity_medium", 0), ing.get("quantity_large", 0))
         )
     db.commit()
     db.close()
@@ -898,6 +1005,25 @@ async def delete_recipe(recipe_id: int):
     return {"ok": True}
 
 
+# ── Paramètres ───────────────────────────────────────────────────
+
+@app.get("/api/fc/settings")
+async def get_settings():
+    db = get_db()
+    rows = db.execute("SELECT key, value FROM fc_settings").fetchall()
+    db.close()
+    return {r["key"]: r["value"] for r in rows}
+
+@app.post("/api/fc/settings")
+async def save_settings(data: dict):
+    db = get_db()
+    for k, v in data.items():
+        db.execute("INSERT OR REPLACE INTO fc_settings (key, value) VALUES (?,?)", (k, str(v)))
+    db.commit()
+    db.close()
+    return {"ok": True}
+
+
 # ── Dashboard stats ───────────────────────────────────────────────
 
 @app.get("/api/fc/stats")
@@ -909,11 +1035,54 @@ async def fc_stats():
     best = min(recipes, key=lambda r: r["food_cost_pct"]) if recipes else None
     worst = max(recipes, key=lambda r: r["food_cost_pct"]) if recipes else None
     ing_count = db.execute("SELECT COUNT(*) FROM fc_ingredients").fetchone()[0]
+    total_monthly_profit = sum(r.get("monthly_profit", 0) for r in recipes)
+    total_monthly_revenue = sum(r.get("monthly_revenue", 0) for r in recipes)
+    settings_rows = db.execute("SELECT key, value FROM fc_settings").fetchall()
     db.close()
+    settings = {r["key"]: r["value"] for r in settings_rows}
+    target_fc = float(settings.get("target_fc", 30))
+    alerts = [r for r in recipes if r["food_cost_pct"] > target_fc and r["food_cost_pct"] > 0]
     return {
         "total_recipes": total,
         "avg_food_cost_pct": avg_fc,
         "ingredient_count": ing_count,
         "best_recipe": best,
         "worst_recipe": worst,
+        "total_monthly_profit": round(total_monthly_profit, 2),
+        "total_monthly_revenue": round(total_monthly_revenue, 2),
+        "target_fc": target_fc,
+        "alerts": [{"name": r["name"], "fc": r["food_cost_pct"]} for r in alerts],
     }
+
+
+# ── Analyse IA ────────────────────────────────────────────────────
+
+@app.post("/api/fc/ai-analysis")
+async def fc_ai_analysis():
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise HTTPException(400, "Clé API Anthropic manquante")
+    recipes = await list_recipes()
+    if not recipes:
+        raise HTTPException(400, "Aucune recette à analyser")
+    client = anthropic.Anthropic(api_key=api_key)
+    summary = []
+    for r in recipes:
+        summary.append(f"- {r['name']} ({r['category']}) : food cost {r['food_cost_pct']}%, coût matière {r['ingredient_cost']}€, prix vente {r['selling_price']}€, marge {r['margin']}€")
+    prompt = f"""Tu es un consultant en restauration spécialisé en pizzeria. Voici les données food cost de la pizzeria Pizz'en Seyne :
+
+{chr(10).join(summary)}
+
+Analyse ces données et donne :
+1. Un diagnostic global (2-3 phrases)
+2. Les 3 principales recommandations pour améliorer la rentabilité (concrètes et actionnables)
+3. Les recettes à surveiller en priorité et pourquoi
+4. Un conseil sur la stratégie de prix si pertinent
+
+Réponds en français, de manière concise et pratique. Format Markdown."""
+    msg = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=1000,
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return {"analysis": msg.content[0].text}
