@@ -202,7 +202,6 @@
   </div>
   <nav>
     <button onclick="window.print()">🖨️ Imprimer</button>
-    <button onclick="window.location='/'">📱 Social Posts</button>
   </nav>
 </header>
 
@@ -409,23 +408,59 @@
   <!-- ══ PARAMÈTRES ════════════════════════════════════════════ -->
   <div id="tab-settings" class="tab-content">
     <div class="card settings-section">
-      <h2>⚙️ Paramètres food cost</h2>
-      <div class="form-grid" style="max-width:500px;">
-        <div class="form-group">
-          <label>Objectif food cost (%)</label>
-          <input id="set-target-fc" type="number" step="0.5" value="30" placeholder="ex: 30">
-        </div>
+      <h2>⚙️ Paramètres généraux</h2>
+      <div class="form-grid" style="max-width:600px;">
         <div class="form-group">
           <label>Nom de la pizzeria</label>
           <input id="set-name" type="text" placeholder="Pizz'en Seyne" value="Pizz'en Seyne">
+        </div>
+        <div class="form-group">
+          <label>Objectif food cost (%)</label>
+          <input id="set-target-fc" type="number" step="0.5" value="30" placeholder="ex: 30">
         </div>
         <div class="form-group">
           <label>Pizzas vendues / mois</label>
           <input id="set-monthly-pizzas" type="number" step="1" placeholder="ex: 800" value="0">
         </div>
       </div>
-      <div style="margin-top:14px;">
-        <button class="btn btn-success" onclick="saveSettings()">💾 Enregistrer</button>
+    </div>
+
+    <div class="card settings-section">
+      <h2>🤖 Clés API Intelligence Artificielle</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Entrez votre clé API pour activer l'analyse IA. Seule la clé active sera utilisée — les autres sont ignorées. Les clés sont stockées localement sur votre serveur.</p>
+      <div class="form-grid" style="max-width:700px;">
+        <div class="form-group span2" style="position:relative;">
+          <label>🟣 Claude (Anthropic) — <a href="https://console.anthropic.com" target="_blank" style="color:var(--blue-l);font-size:11px;">console.anthropic.com</a></label>
+          <div style="display:flex;gap:8px;">
+            <input id="set-api-claude" type="password" placeholder="sk-ant-api03-…" style="flex:1;">
+            <button class="btn btn-secondary btn-sm" onclick="toggleKey('set-api-claude')">👁</button>
+          </div>
+        </div>
+        <div class="form-group span2">
+          <label>🟢 ChatGPT (OpenAI) — <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--blue-l);font-size:11px;">platform.openai.com</a></label>
+          <div style="display:flex;gap:8px;">
+            <input id="set-api-openai" type="password" placeholder="sk-proj-…" style="flex:1;">
+            <button class="btn btn-secondary btn-sm" onclick="toggleKey('set-api-openai')">👁</button>
+          </div>
+        </div>
+        <div class="form-group span2">
+          <label>🔵 Gemini (Google) — <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--blue-l);font-size:11px;">aistudio.google.com</a></label>
+          <div style="display:flex;gap:8px;">
+            <input id="set-api-gemini" type="password" placeholder="AIzaSy…" style="flex:1;">
+            <button class="btn btn-secondary btn-sm" onclick="toggleKey('set-api-gemini')">👁</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>IA active</label>
+          <select id="set-ai-provider">
+            <option value="claude">Claude (Anthropic)</option>
+            <option value="openai">ChatGPT (OpenAI)</option>
+            <option value="gemini">Gemini (Google)</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:16px;">
+        <button class="btn btn-success" onclick="saveSettings()">💾 Enregistrer tous les paramètres</button>
       </div>
       <div id="settings-alert" style="margin-top:10px;"></div>
     </div>
@@ -678,9 +713,13 @@ async function loadRecipes()     { const r = await fetch('/api/fc/recipes');    
 async function loadSettings()    { const r = await fetch('/api/fc/settings');    settings    = await r.json(); }
 
 function applySettings() {
-  if (settings.target_fc)     document.getElementById('set-target-fc').value     = settings.target_fc;
-  if (settings.name)          document.getElementById('set-name').value          = settings.name;
+  if (settings.target_fc)      document.getElementById('set-target-fc').value      = settings.target_fc;
+  if (settings.name)           document.getElementById('set-name').value           = settings.name;
   if (settings.monthly_pizzas) document.getElementById('set-monthly-pizzas').value = settings.monthly_pizzas;
+  if (settings.api_claude)     document.getElementById('set-api-claude').value     = settings.api_claude;
+  if (settings.api_openai)     document.getElementById('set-api-openai').value     = settings.api_openai;
+  if (settings.api_gemini)     document.getElementById('set-api-gemini').value     = settings.api_gemini;
+  if (settings.ai_provider)    document.getElementById('set-ai-provider').value    = settings.ai_provider;
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────
@@ -1123,6 +1162,12 @@ async function saveSettings() {
   renderDashboard();
 }
 
+// ── Toggle clé API visible ────────────────────────────────────────
+function toggleKey(id) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
 // ── AI Analysis ───────────────────────────────────────────────────
 async function runAiAnalysis() {
   document.getElementById('ai-btn').disabled = true;
@@ -1539,6 +1584,10 @@ saveSettings = async function() {
     target_fc: document.getElementById('set-target-fc').value,
     name: document.getElementById('set-name').value,
     monthly_pizzas: document.getElementById('set-monthly-pizzas')?.value || '0',
+    api_claude:  document.getElementById('set-api-claude')?.value  || '',
+    api_openai:  document.getElementById('set-api-openai')?.value  || '',
+    api_gemini:  document.getElementById('set-api-gemini')?.value  || '',
+    ai_provider: document.getElementById('set-ai-provider')?.value || 'claude',
   };
   await fetch('/api/fc/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
   await loadSettings(); applySettings();
