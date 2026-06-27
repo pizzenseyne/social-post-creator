@@ -442,6 +442,19 @@
       </div>
       <div id="settings-alert" style="margin-top:10px;"></div>
     </div>
+    <div class="card settings-section">
+      <h2>💾 Sauvegarde & Importation des données</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Exportez toutes vos données (ingrédients, recettes, frais fixes, fournisseurs, produits de revente) dans un fichier de sauvegarde. Réimportez-les sur un autre appareil ou après une réinstallation.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+        <button class="btn btn-success" onclick="exportData()">⬇️ Télécharger la sauvegarde</button>
+        <label class="btn btn-secondary" style="cursor:pointer;">
+          ⬆️ Importer une sauvegarde
+          <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importData(this)">
+        </label>
+      </div>
+      <div id="import-result"></div>
+    </div>
+
     <div class="card">
       <h2>ℹ️ Guide food cost pizzeria</h2>
       <div style="font-size:13px;line-height:1.9;color:var(--muted);">
@@ -1567,6 +1580,45 @@ saveSettings = async function() {
   setTimeout(() => document.getElementById('settings-alert').innerHTML = '', 3000);
   renderDashboard();
 };
+
+// ── Export / Import ───────────────────────────────────────────────
+async function exportData() {
+  const r = await fetch('/api/fc/export');
+  const data = await r.json();
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `pizzenseyne-backup-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function importData(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const resultEl = document.getElementById('import-result');
+  resultEl.innerHTML = '<div class="alert" style="background:rgba(52,152,219,.15);border:1px solid #3498db;color:#3498db;">⏳ Importation en cours…</div>';
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (!data.version) throw new Error('Fichier invalide');
+    if (!confirm(`Importer ${data.ingredients?.length||0} ingrédients, ${data.recipes?.length||0} recettes, ${data.charges?.length||0} frais fixes ?\n\nAttention : les données existantes seront conservées et les nouvelles s'ajouteront.`)) {
+      resultEl.innerHTML = '';
+      input.value = '';
+      return;
+    }
+    const r = await fetch('/api/fc/import', {method:'POST', headers:{'Content-Type':'application/json'}, body: text});
+    const result = await r.json();
+    resultEl.innerHTML = `<div class="alert alert-success">✅ Importation réussie : ${result.imported.ingredients} ingrédients, ${result.imported.recipes} recettes, ${result.imported.base_recipes} recettes de base, ${result.imported.charges} frais fixes, ${result.imported.suppliers} fournisseurs, ${result.imported.resale} produits de revente.</div>`;
+    await Promise.all([loadIngredients(), loadRecipes(), loadSettings(), loadAll()]);
+    applySettings(); renderDashboard(); renderIngredients(); renderRecipes(); renderProfitTab();
+  } catch(e) {
+    resultEl.innerHTML = `<div class="alert alert-error">❌ Erreur : ${e.message}</div>`;
+  }
+  input.value = '';
+}
 
 init();
 </script>

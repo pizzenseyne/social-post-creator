@@ -1286,6 +1286,135 @@ async def delete_resale(prod_id: int):
     return {"ok": True}
 
 
+# ── Export / Import ───────────────────────────────────────────────
+
+@app.get("/api/fc/export")
+async def fc_export():
+    from fastapi.responses import JSONResponse
+    db = get_db()
+    ingredients = [dict(r) for r in db.execute("SELECT * FROM fc_ingredients").fetchall()]
+    for i in ingredients:
+        try: i["price_history"] = json.loads(i.get("price_history") or "[]")
+        except: i["price_history"] = []
+
+    recipes_rows = db.execute("SELECT * FROM fc_recipes").fetchall()
+    recipes_out = []
+    for rec in recipes_rows:
+        r = dict(rec)
+        r["ingredients"] = [dict(x) for x in db.execute(
+            "SELECT * FROM fc_recipe_ingredients WHERE recipe_id=?", (r["id"],)
+        ).fetchall()]
+        recipes_out.append(r)
+
+    base_recipes_rows = db.execute("SELECT * FROM fc_base_recipes").fetchall()
+    base_recipes_out = []
+    for rec in base_recipes_rows:
+        r = dict(rec)
+        r["ingredients"] = [dict(x) for x in db.execute(
+            "SELECT * FROM fc_base_recipe_ingredients WHERE base_recipe_id=?", (r["id"],)
+        ).fetchall()]
+        base_recipes_out.append(r)
+
+    charges = [dict(r) for r in db.execute("SELECT * FROM fc_charges").fetchall()]
+    suppliers = [dict(r) for r in db.execute("SELECT * FROM fc_suppliers").fetchall()]
+    resale = [dict(r) for r in db.execute("SELECT * FROM fc_resale_products").fetchall()]
+    settings = {r["key"]: r["value"] for r in db.execute("SELECT key, value FROM fc_settings").fetchall()}
+    db.close()
+
+    return {
+        "version": 1,
+        "exported_at": datetime.now().isoformat(),
+        "ingredients": ingredients,
+        "recipes": recipes_out,
+        "base_recipes": base_recipes_out,
+        "charges": charges,
+        "suppliers": suppliers,
+        "resale": resale,
+        "settings": settings,
+    }
+
+
+@app.post("/api/fc/import")
+async def fc_import(request: Request):
+    data = await request.json()
+    db = get_db()
+
+    # Map old IDs → new IDs pour les ingrédients
+    ing_id_map = {}
+
+    for ing in data.get("ingredients", []):
+        old_id = ing["id"]
+        history = json.dumps(ing.get("price_history", []))
+        cur = db.execute(
+            "INSERT INTO fc_ingredients (name, unit, purchase_price, purchase_quantity, category, waste_pct, price_history) VALUES (?,?,?,?,?,?,?)",
+            (ing["name"], ing["unit"], ing["purchase_price"], ing["purchase_quantity"],
+             ing.get("category", "Autre"), ing.get("waste_pct", 0), history)
+        )
+        ing_id_map[old_id] = cur.lastrowid
+
+    for rec in data.get("recipes", []):
+        cur = db.execute(
+            "INSERT INTO fc_recipes (name, category, selling_price, selling_price_small, selling_price_medium, selling_price_large, notes, monthly_volume) VALUES (?,?,?,?,?,?,?,?)",
+            (rec["name"], rec.get("category", "Pizza"), rec["selling_price"],
+             rec.get("selling_price_small", 0), rec.get("selling_price_medium", 0),
+             rec.get("selling_price_large", 0), rec.get("notes", ""), rec.get("monthly_volume", 0))
+        )
+        new_recipe_id = cur.lastrowid
+        for ing in rec.get("ingredients", []):
+            new_ing_id = ing_id_map.get(ing["ingredient_id"])
+            if new_ing_id:
+                db.execute(
+                    "INSERT INTO fc_recipe_ingredients (recipe_id, ingredient_id, quantity, quantity_small, quantity_medium, quantity_large) VALUES (?,?,?,?,?,?)",
+                    (new_recipe_id, new_ing_id, ing["quantity"],
+                     ing.get("quantity_small", 0), ing.get("quantity_medium", 0), ing.get("quantity_large", 0))
+                )
+
+    for rec in data.get("base_recipes", []):
+        old_br_id = rec["id"]
+        cur = db.execute(
+            "INSERT INTO fc_base_recipes (name, type, yield_g, notes) VALUES (?,?,?,?)",
+            (rec["name"], rec.get("type", "Pâte"), rec["yield_g"], rec.get("notes", ""))
+        )
+        new_br_id = cur.lastrowid
+        for ing in rec.get("ingredients", []):
+            new_ing_id = ing_id_map.get(ing["ingredient_id"])
+            if new_ing_id:
+                db.execute(
+                    "INSERT INTO fc_base_recipe_ingredients (base_recipe_id, ingredient_id, quantity_g) VALUES (?,?,?)",
+                    (new_br_id, new_ing_id, ing["quantity_g"])
+                )
+
+    for charge in data.get("charges", []):
+        db.execute("INSERT INTO fc_charges (name, amount, category) VALUES (?,?,?)",
+                   (charge["name"], charge["amount"], charge.get("category", "Autre")))
+
+    for sup in data.get("suppliers", []):
+        db.execute("INSERT INTO fc_suppliers (name, contact, phone, email, notes) VALUES (?,?,?,?,?)",
+                   (sup["name"], sup.get("contact",""), sup.get("phone",""), sup.get("email",""), sup.get("notes","")))
+
+    for prod in data.get("resale", []):
+        db.execute(
+            "INSERT INTO fc_resale_products (name, category, buy_price_ht, vat_rate, resale_price_ttc, supplier, notes) VALUES (?,?,?,?,?,?,?)",
+            (prod["name"], prod.get("category","Boissons soft"), prod["buy_price_ht"],
+             prod.get("vat_rate", 10), prod["resale_price_ttc"], prod.get("supplier",""), prod.get("notes",""))
+        )
+
+    for k, v in data.get("settings", {}).items():
+        if k not in ("api_openai",):  # ne pas écraser la clé API
+            db.execute("INSERT OR REPLACE INTO fc_settings (key, value) VALUES (?,?)", (k, str(v)))
+
+    db.commit()
+    db.close()
+    return {"ok": True, "imported": {
+        "ingredients": len(data.get("ingredients", [])),
+        "recipes": len(data.get("recipes", [])),
+        "base_recipes": len(data.get("base_recipes", [])),
+        "charges": len(data.get("charges", [])),
+        "suppliers": len(data.get("suppliers", [])),
+        "resale": len(data.get("resale", [])),
+    }}
+
+
 # ── Analyse IA ────────────────────────────────────────────────────
 
 @app.post("/api/fc/ai-analysis")
