@@ -364,15 +364,33 @@
 
   <!-- ══ CALCUL PAR POIDS ═══════════════════════════════════════ -->
   <div id="tab-prixkg" class="tab-content">
-    <div class="card" style="max-width:600px;">
+    <div class="card" style="max-width:640px;">
       <h2>⚖️ Calculateur de prix rapide</h2>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Entrez le prix d'achat et la quantité pour obtenir le coût par unité, ou entrez un coût cible pour estimer le prix de vente.</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Calculez le coût par unité d'un produit, puis enregistrez-le directement dans vos ingrédients.</p>
       <div class="form-grid">
+        <div class="form-group span2">
+          <label>Nom du produit</label>
+          <input id="pk-name" type="text" placeholder="ex: Mozzarella fior di latte" oninput="calcPrixKg()">
+        </div>
+        <div class="form-group">
+          <label>Catégorie</label>
+          <select id="pk-category" onchange="togglePkCustomCat()">
+            <option>Fromage</option><option>Charcuterie</option><option>Légume</option>
+            <option>Sauce</option><option>Farine / Pâte</option><option>Huile / Condiment</option>
+            <option>Fruit de mer</option><option>Viande</option><option>Boisson</option>
+            <option value="__custom__">Autre (personnalisée)</option>
+          </select>
+        </div>
+        <div class="form-group" id="pk-custom-cat-wrap" style="display:none;">
+          <label>Nom de la catégorie</label>
+          <input id="pk-custom-cat" type="text" placeholder="ex: Épices, Surgelés…">
+        </div>
         <div class="form-group"><label>Prix d'achat (€)</label><input id="pk-price" type="number" step="0.01" placeholder="4.50" oninput="calcPrixKg()"></div>
         <div class="form-group"><label>Quantité achetée</label><input id="pk-qty" type="number" step="0.01" placeholder="1000" oninput="calcPrixKg()"></div>
         <div class="form-group"><label>Unité</label><select id="pk-unit" onchange="calcPrixKg()">
           <option value="g">g</option><option value="kg">kg</option><option value="ml">ml</option>
           <option value="L">L</option><option value="pcs">pcs</option>
+          <option value="tranche">tranche</option><option value="portion">portion</option>
         </select></div>
         <div class="form-group"><label>Quantité utilisée</label><input id="pk-use" type="number" step="0.01" placeholder="150" oninput="calcPrixKg()"></div>
       </div>
@@ -380,6 +398,11 @@
         <div class="pv"><span>Coût / unité</span><span id="pk-unit-cost">—</span></div>
         <div class="pv"><span>Coût utilisé</span><span id="pk-use-cost">—</span></div>
       </div>
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-success" onclick="saveIngFromCalc()">➕ Ajouter aux ingrédients</button>
+        <button class="btn btn-secondary" onclick="resetCalc()">🔄 Réinitialiser</button>
+      </div>
+      <div id="pk-alert" style="margin-top:10px;"></div>
       <div class="sep"></div>
       <h2>🎯 Prix de vente conseillé</h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Calculez le prix de vente à partir d'un coût matière et d'un objectif de food cost.</p>
@@ -1534,6 +1557,11 @@ async function deleteSupplier(id) {
 }
 
 // ── Calcul par poids ──────────────────────────────────────────────
+function togglePkCustomCat() {
+  const sel = document.getElementById('pk-category');
+  document.getElementById('pk-custom-cat-wrap').style.display = sel.value === '__custom__' ? 'flex' : 'none';
+}
+
 function calcPrixKg() {
   const price = parseFloat(document.getElementById('pk-price').value) || 0;
   const qty   = parseFloat(document.getElementById('pk-qty').value) || 0;
@@ -1542,6 +1570,45 @@ function calcPrixKg() {
   const uc = qty > 0 ? price / qty : 0;
   document.getElementById('pk-unit-cost').textContent = uc > 0 ? uc.toFixed(5) + ' €/' + unit : '—';
   document.getElementById('pk-use-cost').textContent  = (uc > 0 && use > 0) ? (uc * use).toFixed(3) + ' €' : '—';
+}
+
+async function saveIngFromCalc() {
+  const name  = document.getElementById('pk-name').value.trim();
+  const price = parseFloat(document.getElementById('pk-price').value);
+  const qty   = parseFloat(document.getElementById('pk-qty').value);
+  const unit  = document.getElementById('pk-unit').value;
+  const catSel = document.getElementById('pk-category').value;
+  const category = catSel === '__custom__'
+    ? (document.getElementById('pk-custom-cat').value.trim() || 'Autre')
+    : catSel;
+  const alertEl = document.getElementById('pk-alert');
+
+  if (!name) {
+    alertEl.innerHTML = '<div class="alert alert-error">Veuillez entrer un nom de produit.</div>';
+    return;
+  }
+  if (isNaN(price) || isNaN(qty) || qty <= 0) {
+    alertEl.innerHTML = '<div class="alert alert-error">Veuillez entrer le prix et la quantité achetée.</div>';
+    return;
+  }
+
+  await fetch('/api/fc/ingredients', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ name, unit, purchase_price: price, purchase_quantity: qty, category, waste_pct: 0 })
+  });
+  await loadIngredients();
+  alertEl.innerHTML = `<div class="alert alert-success">✅ "${name}" ajouté à vos ingrédients !</div>`;
+  setTimeout(() => alertEl.innerHTML = '', 3000);
+}
+
+function resetCalc() {
+  ['pk-name','pk-price','pk-qty','pk-use'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('pk-category').value = 'Fromage';
+  document.getElementById('pk-custom-cat-wrap').style.display = 'none';
+  document.getElementById('pk-unit-cost').textContent = '—';
+  document.getElementById('pk-use-cost').textContent = '—';
+  document.getElementById('pk-alert').innerHTML = '';
 }
 
 function calcPrixVente() {
