@@ -6,7 +6,7 @@ cd /d "%~dp0"
 if not exist "venv\Scripts\python.exe" (
     echo Installation en cours, patientez...
     py -m venv venv
-    venv\Scripts\pip install fastapi "uvicorn[standard]" python-dotenv httpx --quiet
+    venv\Scripts\pip install fastapi "uvicorn[standard]" python-dotenv httpx python-multipart pymupdf --quiet
     echo Installation terminee !
 )
 

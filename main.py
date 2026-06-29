@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
@@ -6,6 +6,7 @@ import sqlite3
 import os
 import json
 import httpx
+import base64
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
@@ -759,3 +760,87 @@ Réponds en français, de manière concise et pratique. Format Markdown."""
         )
         r.raise_for_status()
         return {"analysis": r.json()["choices"][0]["message"]["content"]}
+
+
+# ── Import facture / devis ─────────────────────────────────────────
+
+@app.post("/api/fc/analyze-invoice")
+async def analyze_invoice(file: UploadFile = File(...)):
+    db = get_db()
+    settings_rows = db.execute("SELECT key, value FROM fc_settings").fetchall()
+    db.close()
+    cfg = {r["key"]: r["value"] for r in settings_rows}
+    api_openai = cfg.get("api_openai", "") or os.getenv("OPENAI_API_KEY", "")
+    if not api_openai:
+        raise HTTPException(400, "Clé API OpenAI manquante — ajoutez-la dans Paramètres")
+
+    content = await file.read()
+    mime = file.content_type or ""
+
+    # Conversion PDF → image PNG (première page) si pymupdf disponible
+    if mime == "application/pdf" or file.filename.lower().endswith(".pdf"):
+        try:
+            import fitz
+            doc = fitz.open(stream=content, filetype="pdf")
+            page = doc[0]
+            pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+            content = pix.tobytes("png")
+            mime = "image/png"
+        except ImportError:
+            raise HTTPException(400, "PDF non supporté sur ce serveur — envoyez une photo (JPG/PNG) de la facture")
+
+    if mime not in ("image/jpeg", "image/png", "image/webp"):
+        raise HTTPException(400, "Format non supporté. Envoyez une image JPG, PNG ou un PDF.")
+
+    img_b64 = base64.b64encode(content).decode()
+
+    prompt = """Tu es un assistant pour une pizzeria. Analyse cette facture ou ce devis fournisseur.
+Extrais tous les articles (matières premières, ingrédients, produits alimentaires).
+
+Réponds UNIQUEMENT avec du JSON valide, sans texte avant ou après :
+{
+  "supplier": "nom du fournisseur si visible, sinon null",
+  "date": "date de la facture si visible (format YYYY-MM-DD), sinon null",
+  "items": [
+    {
+      "name": "nom de l'article",
+      "quantity": 1.0,
+      "unit": "kg",
+      "unit_price": 0.0,
+      "category": "catégorie suggérée parmi: Farines & Céréales, Viandes & Charcuterie, Fromages & Laitages, Légumes & Fruits, Conserves & Sauces, Boissons, Emballages, Autre"
+    }
+  ]
+}
+
+Règles :
+- unit doit être : kg, g, L, cl, pcs, boite, sachet
+- unit_price = prix par unité (HT de préférence)
+- Si tu vois une quantité et un prix total, calcule le prix unitaire = prix_total / quantité
+- N'inclus pas les frais de livraison, remises, TVA comme articles
+- Si un article n'est clairement pas un ingrédient alimentaire, ignore-le"""
+
+    async with httpx.AsyncClient(timeout=60) as client:
+        r = await client.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_openai}", "Content-Type": "application/json"},
+            json={
+                "model": "gpt-4o",
+                "max_tokens": 2000,
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{img_b64}", "detail": "high"}},
+                        {"type": "text", "text": prompt}
+                    ]
+                }]
+            }
+        )
+        r.raise_for_status()
+
+    text = r.json()["choices"][0]["message"]["content"].strip()
+    if "```json" in text:
+        text = text.split("```json")[1].split("```")[0].strip()
+    elif "```" in text:
+        text = text.split("```")[1].split("```")[0].strip()
+
+    return json.loads(text)

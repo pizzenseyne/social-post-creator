@@ -288,9 +288,15 @@
 
   <!-- ══ INGRÉDIENTS ════════════════════════════════════════════ -->
   <div id="tab-ingredients" class="tab-content">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
       <h2 style="font-size:18px;">Mes ingrédients</h2>
-      <button class="btn btn-primary" onclick="openIngModal()">+ Nouvel ingrédient</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <label class="btn btn-secondary" style="cursor:pointer;display:flex;align-items:center;gap:6px;">
+          📄 Importer une facture
+          <input type="file" id="invoice-file" accept="image/*,.pdf" style="display:none;" onchange="analyzeInvoice(this)">
+        </label>
+        <button class="btn btn-primary" onclick="openIngModal()">+ Nouvel ingrédient</button>
+      </div>
     </div>
     <input class="search-bar" type="text" placeholder="🔍 Rechercher…" id="ing-search" oninput="renderIngredients()">
     <div class="card">
@@ -586,6 +592,52 @@
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeResaleModal()">Annuler</button>
       <button class="btn btn-primary" onclick="saveResale()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modal Import Facture ════════════════════════════════════ -->
+<div class="modal-overlay" id="invoice-modal">
+  <div class="modal" style="max-width:820px;">
+    <h2>📄 Import facture / devis</h2>
+    <div id="invoice-alert"></div>
+    <div id="invoice-loading" style="display:none;text-align:center;padding:32px 0;">
+      <div style="font-size:32px;margin-bottom:12px;">⏳</div>
+      <div style="color:var(--muted);">Analyse du document en cours…</div>
+    </div>
+    <div id="invoice-result" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <div>
+          <span id="invoice-supplier-label" style="font-weight:700;font-size:15px;"></span>
+          <span id="invoice-date-label" style="font-size:12px;color:var(--muted);margin-left:10px;"></span>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px;" onclick="invoiceSelectAll(true)">Tout sélectionner</button>
+          <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px;" onclick="invoiceSelectAll(false)">Tout désélectionner</button>
+        </div>
+      </div>
+      <div class="table-wrap" style="max-height:400px;overflow-y:auto;">
+        <table>
+          <thead><tr>
+            <th style="width:32px;"></th>
+            <th>Article</th>
+            <th>Catégorie</th>
+            <th>Qté</th>
+            <th>Unité</th>
+            <th>Prix unit.</th>
+          </tr></thead>
+          <tbody id="invoice-items-table"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:8px;font-size:12px;color:var(--muted);">
+        💡 Vous pouvez modifier les valeurs directement dans le tableau avant d'importer.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeInvoiceModal()">Fermer</button>
+      <button class="btn btn-primary" id="invoice-import-btn" style="display:none;" onclick="importInvoiceItems()">
+        ✅ Ajouter les ingrédients sélectionnés
+      </button>
     </div>
   </div>
 </div>
@@ -1327,6 +1379,7 @@ document.getElementById('recipe-modal').addEventListener('click', e => { if(e.ta
 document.getElementById('baserecipe-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeBRModal(); });
 document.getElementById('resale-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeResaleModal(); });
 document.getElementById('supplier-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeSupplierModal(); });
+document.getElementById('invoice-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeInvoiceModal(); });
 
 // ════════════════════════════════════════════════════════════════
 //  NOUVEAUX MODULES
@@ -1801,6 +1854,138 @@ async function importData(input) {
 }
 
 init();
+
+// ════════════════════════════════════════════════════════════════
+//  IMPORT FACTURE / DEVIS
+// ════════════════════════════════════════════════════════════════
+
+const INVOICE_UNITS = ['kg','g','L','cl','pcs','boite','sachet'];
+const INVOICE_CATS  = ['Farines & Céréales','Viandes & Charcuterie','Fromages & Laitages','Légumes & Fruits','Conserves & Sauces','Boissons','Emballages','Autre'];
+
+async function analyzeInvoice(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  const alertEl = document.getElementById('invoice-alert');
+  const loadEl  = document.getElementById('invoice-loading');
+  const resultEl = document.getElementById('invoice-result');
+  const importBtn = document.getElementById('invoice-import-btn');
+
+  alertEl.innerHTML = '';
+  loadEl.style.display = 'block';
+  resultEl.style.display = 'none';
+  importBtn.style.display = 'none';
+  document.getElementById('invoice-modal').classList.add('open');
+
+  try {
+    const form = new FormData();
+    form.append('file', file);
+    const r = await fetch('/api/fc/analyze-invoice', {method:'POST', body: form});
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(err.detail || 'Erreur serveur');
+    }
+    const data = await r.json();
+
+    loadEl.style.display = 'none';
+    resultEl.style.display = 'block';
+
+    document.getElementById('invoice-supplier-label').textContent = data.supplier ? `🏭 ${data.supplier}` : '';
+    document.getElementById('invoice-date-label').textContent = data.date ? `📅 ${data.date}` : '';
+
+    const tbody = document.getElementById('invoice-items-table');
+    tbody.innerHTML = '';
+    (data.items || []).forEach((item, i) => {
+      const unitOpts = INVOICE_UNITS.map(u => `<option value="${u}"${u===item.unit?' selected':''}>${u}</option>`).join('');
+      const catOpts  = INVOICE_CATS.map(c => `<option value="${c}"${c===item.category?' selected':''}>${c}</option>`).join('');
+      tbody.innerHTML += `<tr id="inv-row-${i}">
+        <td><input type="checkbox" class="inv-check" data-i="${i}" checked style="width:16px;height:16px;accent-color:var(--red);cursor:pointer;"></td>
+        <td><input type="text" value="${item.name}" data-field="name" data-i="${i}" class="inv-input" style="min-width:160px;"></td>
+        <td><select data-field="category" data-i="${i}" class="inv-input" style="min-width:140px;">${catOpts}</select></td>
+        <td><input type="number" value="${item.quantity}" min="0" step="any" data-field="quantity" data-i="${i}" class="inv-input" style="width:70px;"></td>
+        <td><select data-field="unit" data-i="${i}" class="inv-input" style="width:70px;">${unitOpts}</select></td>
+        <td><input type="number" value="${item.unit_price}" min="0" step="any" data-field="unit_price" data-i="${i}" class="inv-input" style="width:80px;"> €</td>
+      </tr>`;
+    });
+
+    // Sync edits back to data.items
+    tbody.querySelectorAll('.inv-input').forEach(el => {
+      el.addEventListener('change', () => {
+        const i = +el.dataset.i;
+        const f = el.dataset.field;
+        data.items[i][f] = (f === 'name' || f === 'unit' || f === 'category') ? el.value : parseFloat(el.value) || 0;
+      });
+    });
+
+    importBtn.style.display = '';
+    importBtn._invoiceData = data;
+
+  } catch(e) {
+    loadEl.style.display = 'none';
+    const msg = e.message === 'Failed to fetch'
+      ? 'Serveur non accessible — vérifiez que l\'application est lancée'
+      : e.message;
+    alertEl.innerHTML = `<div class="alert alert-error">❌ ${msg}</div>`;
+  }
+}
+
+function invoiceSelectAll(checked) {
+  document.querySelectorAll('.inv-check').forEach(cb => cb.checked = checked);
+}
+
+function closeInvoiceModal() {
+  document.getElementById('invoice-modal').classList.remove('open');
+}
+
+async function importInvoiceItems() {
+  const btn = document.getElementById('invoice-import-btn');
+  const data = btn._invoiceData;
+  if (!data) return;
+
+  const checked = [...document.querySelectorAll('.inv-check:checked')].map(cb => +cb.dataset.i);
+  if (!checked.length) {
+    document.getElementById('invoice-alert').innerHTML = '<div class="alert alert-error">Sélectionnez au moins un article.</div>';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Import en cours…';
+  let added = 0;
+  const supplier = data.supplier || '';
+
+  for (const i of checked) {
+    const item = data.items[i];
+    if (!item.name || !item.unit_price) continue;
+    await fetch('/api/fc/ingredients', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        name: item.name,
+        unit: item.unit || 'kg',
+        purchase_price: item.unit_price,
+        purchase_quantity: item.quantity || 1,
+        category: item.category || 'Autre',
+        waste_pct: 0,
+        supplier: supplier,
+      })
+    });
+    added++;
+  }
+
+  await loadIngredients();
+  renderIngredients();
+  closeInvoiceModal();
+  btn.disabled = false;
+  btn.textContent = '✅ Ajouter les ingrédients sélectionnés';
+
+  // Petit feedback visuel
+  const banner = document.getElementById('fc-alert-banner');
+  if (banner) {
+    banner.innerHTML = `<div class="alert alert-success" style="margin-bottom:12px;">✅ ${added} ingrédient(s) ajouté(s) depuis la facture.</div>`;
+    setTimeout(() => banner.innerHTML = '', 4000);
+  }
+}
 </script>
 </body>
 </html>
