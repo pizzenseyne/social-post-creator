@@ -1792,7 +1792,10 @@ async function importData(input) {
     await Promise.all([loadIngredients(), loadRecipes(), loadSettings(), loadAll()]);
     applySettings(); renderDashboard(); renderIngredients(); renderRecipes(); renderProfitTab();
   } catch(e) {
-    resultEl.innerHTML = `<div class="alert alert-error">❌ Erreur : ${e.message}</div>`;
+    const msg = e.message === 'Failed to fetch'
+      ? 'Serveur non accessible — vérifiez que l\'application est bien lancée sur http://localhost:8000'
+      : e.message;
+    resultEl.innerHTML = `<div class="alert alert-error">❌ Erreur : ${msg}</div>`;
   }
   input.value = '';
 }
