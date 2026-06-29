@@ -54,6 +54,7 @@ def init_db():
         category TEXT DEFAULT 'Autre',
         waste_pct REAL DEFAULT 0,
         price_history TEXT DEFAULT '[]',
+        supplier TEXT DEFAULT '',
         created_at TEXT DEFAULT (datetime('now','localtime'))
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS fc_recipes (
@@ -153,6 +154,9 @@ def init_db():
     except Exception: pass
     try:
         c.execute("ALTER TABLE fc_recipe_ingredients ADD COLUMN quantity_large REAL DEFAULT 0")
+    except Exception: pass
+    try:
+        c.execute("ALTER TABLE fc_ingredients ADD COLUMN supplier TEXT DEFAULT ''")
     except Exception: pass
     conn.commit()
     conn.close()
@@ -914,9 +918,9 @@ async def create_ingredient(data: dict):
     db = get_db()
     history = json.dumps([{"date": datetime.now().strftime("%Y-%m-%d"), "price": data["purchase_price"], "qty": data["purchase_quantity"]}])
     cur = db.execute(
-        "INSERT INTO fc_ingredients (name, unit, purchase_price, purchase_quantity, category, waste_pct, price_history) VALUES (?,?,?,?,?,?,?)",
+        "INSERT INTO fc_ingredients (name, unit, purchase_price, purchase_quantity, category, waste_pct, price_history, supplier) VALUES (?,?,?,?,?,?,?,?)",
         (data["name"], data["unit"], data["purchase_price"], data["purchase_quantity"],
-         data.get("category", "Autre"), data.get("waste_pct", 0), history)
+         data.get("category", "Autre"), data.get("waste_pct", 0), history, data.get("supplier", ""))
     )
     db.commit()
     row = db.execute("SELECT * FROM fc_ingredients WHERE id=?", (cur.lastrowid,)).fetchone()
@@ -943,9 +947,9 @@ async def update_ingredient(ing_id: int, data: dict):
         history.append({"date": datetime.now().strftime("%Y-%m-%d"), "price": new_price, "qty": new_qty})
         history = history[-24:]  # garder 24 entrées max
     db.execute(
-        "UPDATE fc_ingredients SET name=?, unit=?, purchase_price=?, purchase_quantity=?, category=?, waste_pct=?, price_history=? WHERE id=?",
+        "UPDATE fc_ingredients SET name=?, unit=?, purchase_price=?, purchase_quantity=?, category=?, waste_pct=?, price_history=?, supplier=? WHERE id=?",
         (data["name"], data["unit"], new_price, new_qty, data.get("category", "Autre"),
-         data.get("waste_pct", 0), json.dumps(history), ing_id)
+         data.get("waste_pct", 0), json.dumps(history), data.get("supplier", ""), ing_id)
     )
     db.commit()
     row = db.execute("SELECT * FROM fc_ingredients WHERE id=?", (ing_id,)).fetchone()
@@ -1346,9 +1350,9 @@ async def fc_import(request: Request):
         old_id = ing["id"]
         history = json.dumps(ing.get("price_history", []))
         cur = db.execute(
-            "INSERT INTO fc_ingredients (name, unit, purchase_price, purchase_quantity, category, waste_pct, price_history) VALUES (?,?,?,?,?,?,?)",
+            "INSERT INTO fc_ingredients (name, unit, purchase_price, purchase_quantity, category, waste_pct, price_history, supplier) VALUES (?,?,?,?,?,?,?,?)",
             (ing["name"], ing["unit"], ing["purchase_price"], ing["purchase_quantity"],
-             ing.get("category", "Autre"), ing.get("waste_pct", 0), history)
+             ing.get("category", "Autre"), ing.get("waste_pct", 0), history, ing.get("supplier", ""))
         )
         ing_id_map[old_id] = cur.lastrowid
 
