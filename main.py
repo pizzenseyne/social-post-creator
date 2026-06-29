@@ -149,6 +149,16 @@ app.add_middleware(
 async def serve_frontend():
     return FileResponse(str(BASE_DIR / "foodcost.html"))
 
+@app.get("/sw.js")
+async def serve_sw():
+    from fastapi.responses import Response
+    return Response("", media_type="application/javascript")
+
+@app.get("/manifest.json")
+async def serve_manifest():
+    from fastapi.responses import JSONResponse
+    return JSONResponse({})
+
 @app.get("/icon-{size}.png")
 async def serve_icon(size: int):
     path = BASE_DIR / f"icon-{size}.png"
