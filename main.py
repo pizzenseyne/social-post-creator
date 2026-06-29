@@ -806,69 +806,58 @@ async def analyze_invoice(file: UploadFile = File(...)):
     mime = file.content_type or ""
     is_pdf = mime == "application/pdf" or (file.filename or "").lower().endswith(".pdf")
 
-    if is_pdf:
-        # Extraction texte PDF (fonctionne pour PDFs numériques / factures fournisseurs)
-        try:
-            from pypdf import PdfReader
-            import io
-            reader = PdfReader(io.BytesIO(content))
-            pdf_text = "\n".join(page.extract_text() or "" for page in reader.pages)
+    try:
+        if is_pdf:
+            try:
+                from pypdf import PdfReader
+                import io
+                reader = PdfReader(io.BytesIO(content))
+                pdf_text = "\n".join(page.extract_text() or "" for page in reader.pages)
+            except ImportError:
+                raise HTTPException(400, "pypdf non installé — relancez LANCER.bat pour mettre à jour les dépendances")
+            except Exception as e:
+                raise HTTPException(400, f"Impossible de lire ce PDF : {e}")
+
             if not pdf_text.strip():
                 raise HTTPException(400, "Ce PDF ne contient pas de texte lisible (scan). Prenez une photo JPG/PNG de la facture.")
-        except ImportError:
-            raise HTTPException(400, "PDF non supporté — envoyez une photo JPG/PNG de la facture")
 
-        async with httpx.AsyncClient(timeout=60) as client:
-            r = await client.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {api_openai}", "Content-Type": "application/json"},
-                json={
-                    "model": "gpt-4o-mini",
-                    "max_tokens": 2000,
-                    "messages": [{"role": "user", "content": f"{INVOICE_PROMPT}\n\nVoici le texte extrait de la facture :\n\n{pdf_text}"}]
-                }
-            )
-            if r.status_code == 429:
+            async with httpx.AsyncClient(timeout=60) as client:
+                resp = await client.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {api_openai}", "Content-Type": "application/json"},
+                    json={"model": "gpt-4o-mini", "max_tokens": 2000,
+                          "messages": [{"role": "user", "content": f"{INVOICE_PROMPT}\n\nVoici le texte extrait de la facture :\n\n{pdf_text}"}]}
+                )
+            if resp.status_code == 429:
                 raise HTTPException(402, "Quota OpenAI dépassé — ajoutez des crédits sur platform.openai.com/settings/billing")
-            r.raise_for_status()
+            resp.raise_for_status()
 
-        text = r.json()["choices"][0]["message"]["content"].strip()
+        else:
+            if mime not in ("image/jpeg", "image/png", "image/webp"):
+                raise HTTPException(400, "Format non supporté. Envoyez un PDF ou une image JPG/PNG.")
+            img_b64 = base64.b64encode(content).decode()
+            async with httpx.AsyncClient(timeout=60) as client:
+                resp = await client.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {api_openai}", "Content-Type": "application/json"},
+                    json={"model": "gpt-4o", "max_tokens": 2000,
+                          "messages": [{"role": "user", "content": [
+                              {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{img_b64}", "detail": "high"}},
+                              {"type": "text", "text": INVOICE_PROMPT}
+                          ]}]}
+                )
+            if resp.status_code == 429:
+                raise HTTPException(402, "Quota OpenAI dépassé — ajoutez des crédits sur platform.openai.com/settings/billing")
+            resp.raise_for_status()
+
+        text = resp.json()["choices"][0]["message"]["content"].strip()
         if "```json" in text:
             text = text.split("```json")[1].split("```")[0].strip()
         elif "```" in text:
             text = text.split("```")[1].split("```")[0].strip()
         return json.loads(text)
 
-    # Image (JPG / PNG / WEBP)
-    if mime not in ("image/jpeg", "image/png", "image/webp"):
-        raise HTTPException(400, "Format non supporté. Envoyez un PDF ou une image JPG/PNG.")
-
-    img_b64 = base64.b64encode(content).decode()
-
-    async with httpx.AsyncClient(timeout=60) as client:
-        r = await client.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {api_openai}", "Content-Type": "application/json"},
-            json={
-                "model": "gpt-4o",
-                "max_tokens": 2000,
-                "messages": [{
-                    "role": "user",
-                    "content": [
-                        {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{img_b64}", "detail": "high"}},
-                        {"type": "text", "text": INVOICE_PROMPT}
-                    ]
-                }]
-            }
-        )
-        if r.status_code == 429:
-            raise HTTPException(402, "Quota OpenAI dépassé — ajoutez des crédits sur platform.openai.com/settings/billing")
-        r.raise_for_status()
-
-    text = r.json()["choices"][0]["message"]["content"].strip()
-    if "```json" in text:
-        text = text.split("```json")[1].split("```")[0].strip()
-    elif "```" in text:
-        text = text.split("```")[1].split("```")[0].strip()
-
-    return json.loads(text)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f"Erreur inattendue : {e}")
