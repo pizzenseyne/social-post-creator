@@ -263,7 +263,7 @@
     <div class="card">
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Nom</th><th>Catégorie</th><th>Unité</th><th>Prix achat</th><th>Qté</th><th>Coût/unité</th><th>Perte</th><th>Coût réel/u</th><th>Tendance</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Nom</th><th>Catégorie</th><th>Fournisseur</th><th>Unité</th><th>Prix achat</th><th>Qté</th><th>Coût/unité</th><th>Perte</th><th>Coût réel/u</th><th>Tendance</th><th>Actions</th></tr></thead>
           <tbody id="ing-table"></tbody>
         </table>
       </div>
@@ -577,45 +577,56 @@
 
 <!-- ══ Modal Ingrédient ════════════════════════════════════════ -->
 <div class="modal-overlay" id="ing-modal">
-  <div class="modal">
+  <div class="modal" style="max-width:780px;">
     <h2 id="ing-modal-title">Nouvel ingrédient</h2>
     <div id="ing-alert"></div>
-    <div class="form-grid">
-      <div class="form-group span2">
-        <label>Nom</label>
-        <input id="ing-name" type="text" placeholder="ex: Mozzarella fior di latte">
+    <div style="display:flex;gap:16px;align-items:flex-start;">
+      <!-- Catégories sur la gauche -->
+      <div style="min-width:160px;">
+        <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Catégorie</div>
+        <div id="ing-cat-list" style="display:flex;flex-direction:column;gap:4px;"></div>
+        <div id="ing-custom-cat-wrap" style="display:none;margin-top:8px;">
+          <input id="ing-custom-cat" type="text" placeholder="Nouvelle catégorie…"
+            style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 10px;font-size:13px;outline:none;">
+        </div>
       </div>
-      <div class="form-group">
-        <label>Catégorie</label>
-        <select id="ing-category">
-          <option>Fromage</option><option>Charcuterie</option><option>Légume</option>
-          <option>Sauce</option><option>Farine / Pâte</option><option>Huile / Condiment</option>
-          <option>Fruit de mer</option><option>Viande</option><option>Boisson</option><option>Autre</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Unité</label>
-        <select id="ing-unit">
-          <option value="g">g (gramme)</option>
-          <option value="kg">kg</option>
-          <option value="ml">ml</option>
-          <option value="L">L (litre)</option>
-          <option value="pcs">pcs (pièce)</option>
-          <option value="tranche">tranche</option>
-          <option value="portion">portion</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Prix d'achat (€)</label>
-        <input id="ing-price" type="number" step="0.01" placeholder="4.50">
-      </div>
-      <div class="form-group">
-        <label>Quantité achetée</label>
-        <input id="ing-qty" type="number" step="0.01" placeholder="1000">
-      </div>
-      <div class="form-group">
-        <label>Taux de perte (%)</label>
-        <input id="ing-waste" type="number" step="0.5" min="0" max="100" placeholder="0" value="0">
+      <!-- Champs à droite -->
+      <div style="flex:1;">
+        <div class="form-grid">
+          <div class="form-group span2">
+            <label>Nom</label>
+            <input id="ing-name" type="text" placeholder="ex: Mozzarella fior di latte">
+          </div>
+          <div class="form-group span2">
+            <label>Fournisseur</label>
+            <input id="ing-supplier" type="text" placeholder="ex: Metro, Castelli, DPS…" list="ing-supplier-list">
+            <datalist id="ing-supplier-list"></datalist>
+          </div>
+          <div class="form-group">
+            <label>Unité</label>
+            <select id="ing-unit">
+              <option value="g">g (gramme)</option>
+              <option value="kg">kg</option>
+              <option value="ml">ml</option>
+              <option value="L">L (litre)</option>
+              <option value="pcs">pcs (pièce)</option>
+              <option value="tranche">tranche</option>
+              <option value="portion">portion</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Taux de perte (%)</label>
+            <input id="ing-waste" type="number" step="0.5" min="0" max="100" placeholder="0" value="0">
+          </div>
+          <div class="form-group">
+            <label>Prix d'achat (€)</label>
+            <input id="ing-price" type="number" step="0.01" placeholder="4.50">
+          </div>
+          <div class="form-group">
+            <label>Quantité achetée</label>
+            <input id="ing-qty" type="number" step="0.01" placeholder="1000">
+          </div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -920,6 +931,7 @@ function renderIngredients() {
     return `<tr>
       <td><strong>${i.name}</strong></td>
       <td>${i.category}</td>
+      <td>${i.supplier ? `<span style="font-size:12px;color:var(--muted)">${i.supplier}</span>` : '—'}</td>
       <td>${i.unit}</td>
       <td>${i.purchase_price.toFixed(2)} €</td>
       <td>${i.purchase_quantity} ${i.unit}</td>
@@ -981,21 +993,82 @@ function renderRecipes() {
 }
 
 // ── Ingredient Modal ──────────────────────────────────────────────
+const ING_CATS_DEFAULT = ['Fromage','Charcuterie','Légume','Sauce','Farine / Pâte','Huile / Condiment','Fruit de mer','Viande','Boisson','Base','Garniture','Dessert','Autre'];
+
+function getIngCategories() {
+  const fromData = [...new Set(ingredients.map(i => i.category).filter(Boolean))];
+  const all = [...new Set([...ING_CATS_DEFAULT, ...fromData])];
+  return all;
+}
+
+function renderIngCatList(selected) {
+  const cats = getIngCategories();
+  const list = document.getElementById('ing-cat-list');
+  list.innerHTML = cats.map(c => `
+    <div onclick="selectIngCat('${c.replace(/'/g,"\\'")}', this)" style="
+      padding:7px 12px;border-radius:8px;cursor:pointer;font-size:13px;
+      background:${c===selected?'var(--red)':'var(--bg)'};
+      color:${c===selected?'#fff':'var(--text)'};
+      border:1px solid ${c===selected?'var(--red)':'var(--border)'};
+      transition:.15s;">${c}</div>
+  `).join('') + `
+    <div onclick="selectIngCat('__custom__', this)" style="
+      padding:7px 12px;border-radius:8px;cursor:pointer;font-size:13px;
+      background:${'__custom__'===selected?'var(--red)':'transparent'};
+      color:var(--muted);border:1px dashed var(--border);margin-top:4px;transition:.15s;">
+      + Nouvelle catégorie
+    </div>`;
+}
+
+function selectIngCat(cat, el) {
+  document.querySelectorAll('#ing-cat-list div').forEach(d => {
+    d.style.background = 'transparent';
+    d.style.color = 'var(--text)';
+    d.style.border = '1px solid var(--border)';
+  });
+  el.style.background = cat === '__custom__' ? 'transparent' : 'var(--red)';
+  el.style.color = cat === '__custom__' ? 'var(--muted)' : '#fff';
+  el.style.border = cat === '__custom__' ? '1px dashed var(--red-l)' : '1px solid var(--red)';
+  el.dataset.selected = 'true';
+  document.getElementById('ing-custom-cat-wrap').style.display = cat === '__custom__' ? 'block' : 'none';
+  document.getElementById('ing-cat-list').dataset.value = cat;
+}
+
+function getSelectedIngCat() {
+  const list = document.getElementById('ing-cat-list');
+  const val = list.dataset.value;
+  if (val === '__custom__') return document.getElementById('ing-custom-cat').value.trim() || 'Autre';
+  return val || 'Autre';
+}
+
+function populateSupplierDatalist() {
+  const sups = [...new Set(ingredients.map(i => i.supplier).filter(Boolean)),
+                ...suppliers.map(s => s.name)];
+  document.getElementById('ing-supplier-list').innerHTML = [...new Set(sups)].map(s => `<option value="${s}">`).join('');
+}
+
 function openIngModal(id=null) {
   editingIngId = id;
   document.getElementById('ing-alert').innerHTML = '';
+  document.getElementById('ing-custom-cat-wrap').style.display = 'none';
+  populateSupplierDatalist();
   const fill = (sel, val) => { document.getElementById(sel).value = val; };
+  let selectedCat = 'Fromage';
   if (id) {
     const i = ingredients.find(x => x.id === id);
-    document.getElementById('ing-modal-title').textContent = 'Modifier l\'ingrédient';
+    document.getElementById('ing-modal-title').textContent = "Modifier l'ingrédient";
     fill('ing-name', i.name); fill('ing-unit', i.unit);
     fill('ing-price', i.purchase_price); fill('ing-qty', i.purchase_quantity);
-    fill('ing-category', i.category); fill('ing-waste', i.waste_pct || 0);
+    fill('ing-waste', i.waste_pct || 0);
+    fill('ing-supplier', i.supplier || '');
+    selectedCat = i.category || 'Autre';
   } else {
     document.getElementById('ing-modal-title').textContent = 'Nouvel ingrédient';
-    ['ing-name','ing-price','ing-qty'].forEach(id => fill(id,''));
+    ['ing-name','ing-price','ing-qty','ing-supplier'].forEach(id => fill(id,''));
     fill('ing-waste','0');
   }
+  renderIngCatList(selectedCat);
+  document.getElementById('ing-cat-list').dataset.value = selectedCat;
   document.getElementById('ing-modal').classList.add('open');
 }
 function closeIngModal() { document.getElementById('ing-modal').classList.remove('open'); }
@@ -1006,8 +1079,9 @@ async function saveIngredient() {
     unit: document.getElementById('ing-unit').value,
     purchase_price: parseFloat(document.getElementById('ing-price').value),
     purchase_quantity: parseFloat(document.getElementById('ing-qty').value),
-    category: document.getElementById('ing-category').value,
+    category: getSelectedIngCat(),
     waste_pct: parseFloat(document.getElementById('ing-waste').value) || 0,
+    supplier: document.getElementById('ing-supplier').value.trim(),
   };
   if (!data.name || isNaN(data.purchase_price) || isNaN(data.purchase_quantity)) {
     document.getElementById('ing-alert').innerHTML = '<div class="alert alert-error">Remplissez tous les champs obligatoires.</div>';
