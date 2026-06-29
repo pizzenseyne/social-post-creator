@@ -811,17 +811,36 @@ let fcChart = null, marginChart = null, profitChart = null, caChart = null;
 
 // ── Bootstrap ─────────────────────────────────────────────────────
 async function init() {
-  await Promise.all([loadIngredients(), loadRecipes(), loadSettings()]);
-  applySettings();
-  renderDashboard();
-  renderIngredients();
-  renderRecipes();
-  renderProfitTab();
+  try {
+    await Promise.all([loadIngredients(), loadRecipes(), loadSettings()]);
+    applySettings();
+    renderDashboard();
+    renderIngredients();
+    renderRecipes();
+    renderProfitTab();
+  } catch(e) {
+    const b = document.getElementById('fc-alert-banner');
+    if (b) b.innerHTML = `<div class="alert alert-error" style="margin-bottom:12px;">
+      ❌ Impossible de contacter le serveur — ouvrez l'app via <strong>http://localhost:8000</strong> (pas en double-cliquant sur le fichier HTML).
+      <br><small>${e.message}</small></div>`;
+  }
 }
 
-async function loadIngredients() { const r = await fetch('/api/fc/ingredients'); ingredients = await r.json(); }
-async function loadRecipes()     { const r = await fetch('/api/fc/recipes');     recipes     = await r.json(); }
-async function loadSettings()    { const r = await fetch('/api/fc/settings');    settings    = await r.json(); }
+async function loadIngredients() {
+  const r = await fetch('/api/fc/ingredients');
+  if (!r.ok) throw new Error(`ingredients: ${r.status}`);
+  ingredients = await r.json();
+}
+async function loadRecipes() {
+  const r = await fetch('/api/fc/recipes');
+  if (!r.ok) throw new Error(`recipes: ${r.status}`);
+  recipes = await r.json();
+}
+async function loadSettings() {
+  const r = await fetch('/api/fc/settings');
+  if (!r.ok) throw new Error(`settings: ${r.status}`);
+  settings = await r.json();
+}
 
 function applySettings() {
   if (settings.target_fc)      document.getElementById('set-target-fc').value      = settings.target_fc;
