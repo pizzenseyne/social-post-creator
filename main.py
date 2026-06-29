@@ -149,14 +149,6 @@ app.add_middleware(
 async def serve_frontend():
     return FileResponse(str(BASE_DIR / "foodcost.html"))
 
-@app.get("/manifest.json")
-async def serve_manifest():
-    return FileResponse(str(BASE_DIR / "manifest.json"), media_type="application/manifest+json")
-
-@app.get("/sw.js")
-async def serve_sw():
-    return FileResponse(str(BASE_DIR / "sw.js"), media_type="application/javascript")
-
 @app.get("/icon-{size}.png")
 async def serve_icon(size: int):
     path = BASE_DIR / f"icon-{size}.png"
