@@ -828,6 +828,8 @@ async def analyze_invoice(file: UploadFile = File(...)):
                     "messages": [{"role": "user", "content": f"{INVOICE_PROMPT}\n\nVoici le texte extrait de la facture :\n\n{pdf_text}"}]
                 }
             )
+            if r.status_code == 429:
+                raise HTTPException(402, "Quota OpenAI dépassé — ajoutez des crédits sur platform.openai.com/settings/billing")
             r.raise_for_status()
 
         text = r.json()["choices"][0]["message"]["content"].strip()
@@ -859,6 +861,8 @@ async def analyze_invoice(file: UploadFile = File(...)):
                 }]
             }
         )
+        if r.status_code == 429:
+            raise HTTPException(402, "Quota OpenAI dépassé — ajoutez des crédits sur platform.openai.com/settings/billing")
         r.raise_for_status()
 
     text = r.json()["choices"][0]["message"]["content"].strip()
