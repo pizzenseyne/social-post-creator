@@ -854,7 +854,7 @@ async def analyze_invoice(file: UploadFile = File(...)):
                     "role": "user",
                     "content": [
                         {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{img_b64}", "detail": "high"}},
-                        {"type": "text", "text": prompt}
+                        {"type": "text", "text": INVOICE_PROMPT}
                     ]
                 }]
             }
