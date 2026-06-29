@@ -2,13 +2,15 @@
 title Pizz'en Seyne - Food Cost
 cd /d "%~dp0"
 
-:: Installation initiale si venv absent
+:: Création du venv si absent
 if not exist "venv\Scripts\python.exe" (
-    echo Installation en cours, patientez...
+    echo Creation de l'environnement...
     py -m venv venv
-    venv\Scripts\pip install fastapi "uvicorn[standard]" python-dotenv httpx python-multipart pymupdf --quiet
-    echo Installation terminee !
 )
+
+:: Mise a jour des dependances a chaque lancement (rapide si deja installe)
+echo Verification des dependances...
+venv\Scripts\pip install -r requirements.txt --quiet
 
 echo.
 echo ============================================
